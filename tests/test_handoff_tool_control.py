@@ -3,7 +3,8 @@ import pytest
 from pydantic_ai import Agent, Tool
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import Collab, CollabAgent, ForwardHandoffCollab, HandOffBase, MeshCollab, StarCollab
+from pydantic_collab import Collab, CollabAgent, ForwardHandoffCollab, MeshCollab, StarCollab
+from pydantic_collab._types import HandOffBase
 
 
 @pytest.fixture()

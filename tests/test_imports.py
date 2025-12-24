@@ -3,6 +3,7 @@
 import pytest
 
 
+
 def test_all_exports_importable():
     """Test that all exports in __all__ are importable."""
     import pydantic_collab as agent_graph
@@ -17,15 +18,14 @@ def test_all_exports_importable():
 def test_core_classes():
     """Test that core classes can be imported."""
     from pydantic_collab import (
-        AgentContext,
         Collab,
         CollabAgent,
         CollabError,
         CollabState,
-        HandOffBase,
         PromptBuilderContext,
-        default_build_agent_prompt,
     )
+    from pydantic_collab._types import AgentContext, HandOffBase
+    from pydantic_collab._utils import default_build_agent_prompt
 
     # Verify they are actual classes/types/functions
     assert AgentContext is not None
@@ -42,7 +42,7 @@ def test_core_classes():
 
 def test_handoff_output_model():
     """Test HandoffOutput model instantiation."""
-    from pydantic_collab import HandOffBase
+    from pydantic_collab._types import HandOffBase
 
     output = HandOffBase[str](next_agent='Agent2', query='Hello')
     assert output.next_agent == 'Agent2'

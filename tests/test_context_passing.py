@@ -10,8 +10,8 @@ from pydantic_collab import (
     CollabAgent,
     CollabSettings,
     ForwardHandoffCollab,
-    HandOffBase,
 )
+from pydantic_collab._types import HandOffBase
 from tests.test_handoff_tool_control import make_test_agent
 
 

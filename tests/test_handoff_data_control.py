@@ -6,7 +6,8 @@ is passed during handoffs and how context is managed.
 import pytest
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import CollabAgent, ForwardHandoffCollab, HandOffBase
+from pydantic_collab import CollabAgent, ForwardHandoffCollab
+from pydantic_collab._types import HandOffBase
 from tests.test_handoff_tool_control import make_test_agent
 
 

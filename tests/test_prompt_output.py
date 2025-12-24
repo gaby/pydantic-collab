@@ -3,8 +3,9 @@
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import CollabAgent, default_build_agent_prompt
+from pydantic_collab import CollabAgent
 from pydantic_collab._types import PromptBuilderContext
+from pydantic_collab._utils import default_build_agent_prompt
 
 # Create test agents
 orchestrator = Agent(TestModel(), name='Orchestrator')
