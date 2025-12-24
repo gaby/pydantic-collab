@@ -1,6 +1,6 @@
 [project]
 name = "pydantic_collab"
-description = "Add your description here"
+description = "Multi Agent System Framework built on top of Pydantic AI. "
 readme = "README.md"
 requires-python = ">=3.11"
 dynamic = [

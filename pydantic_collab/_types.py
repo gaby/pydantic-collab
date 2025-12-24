@@ -72,7 +72,6 @@ class CollabState:
     Automatically creates per-agent contexts based on registered agents.
     """
     query: str
-    #current_query: str = ''
     final_output: str = ''
     agent_contexts: dict[str, AgentContext] = field(default_factory=lambda: cast(dict[str, AgentContext], {}))
     execution_path: list[str] = field(default_factory=lambda: cast(list[str], []))
