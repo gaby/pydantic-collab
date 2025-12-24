@@ -2,7 +2,7 @@
 
 Provides high-level abstractions for building multi-agent systems with Pydantic AI.
 """
-
+__version__ = '0.1.0'
 from ._types import (
     AgentContext,
     CollabAgent,
