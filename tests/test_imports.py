@@ -18,12 +18,12 @@ def test_core_classes():
     """Test that core classes can be imported."""
     from pydantic_collab import (
         AgentContext,
-        CollabAgent,
         Collab,
+        CollabAgent,
+        CollabError,
+        CollabState,
         HandOffBase,
         PromptBuilderContext,
-        CollabState,
-        CollabError,
         default_build_agent_prompt,
     )
 

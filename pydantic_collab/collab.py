@@ -169,7 +169,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         allow_back_handoff: bool = True,
         instrument_logfire: bool = True,
     ) -> None:
-        """Initiate an Collab.
+        """Initiate a Collab.
 
         Args:
             agents: A list of agents with calls and handoffs specified. Agents that don't have calls can be specified
@@ -896,7 +896,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
         Args:
             agent: The agent to determine output type for.
-            handoff_agents: List of agents it can handoff to, None ot empty list if not handoffs.
+            handoff_agents: List of agents it can handoff to, None or empty list if not handoffs.
 
         Returns:
             type[HandOffBase] | type[FinalOutput]: The appropriate Pydantic model

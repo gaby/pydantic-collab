@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import CollabAgent, Collab, StarCollab
+from pydantic_collab import Collab, CollabAgent, StarCollab
 from pydantic_collab._types import CollabError
 
 

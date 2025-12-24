@@ -1,5 +1,4 @@
-"""
-Tests for handoff control and data passing between agents.
+"""Tests for handoff control and data passing between agents.
 
 These tests focus on realistic scenarios for controlling what data
 is passed during handoffs and how context is managed.
@@ -7,14 +6,7 @@ is passed during handoffs and how context is managed.
 import pytest
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import ForwardHandoffCollab, StarCollab, CollabAgent, HandOffBase
-from tests.fixtures_handoff import (
-    HANDOFF_DATA_BASIC,
-    HANDOFF_DATA_WITH_CONTEXT,
-    HANDOFF_DATA_WITHOUT_CONTEXT,
-    HANDOFF_CHAIN,
-    DATA_TRANSFORMATION_CHAIN,
-)
+from pydantic_collab import CollabAgent, ForwardHandoffCollab, HandOffBase
 from tests.test_handoff_tool_control import make_test_agent
 
 

@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from dataclasses import field
 
 from pydantic_ai import ModelSettings, Tool, UsageLimits
 from pydantic_ai.agent.abstract import AbstractAgent, Instructions
@@ -30,8 +29,32 @@ class StarCollab(Collab[AgentDepsT, OutputDataT]):
         usage_limits: UsageLimits | None = None,
         instructions: Instructions[AgentDepsT] = None,
         max_agent_call_depth: int = 3,
+        allow_parallel_agent_calls: bool = True,
         instrument_logfire: bool = True,
     ) -> None:
+        """Initiate a Collab.
+
+        Args:
+            agents: A list of agents with calls and handoffs specified. Agents that don't have calls can be specified
+                as (pydantic_ai.Agent, <description>), Agent that doesn't need description can be specified pydantic_ai.Agent
+            router_agent: The starting and final agent that can call other agents as tools
+            name: Optional name for the Collab, used for logging
+            output_type: Expected output type; overrides the final_agent's output type if specified,
+            tools: tools to add to all agents, in addition to any tools already specified for the agents.
+            model: When set, would use this model for all the agents and override their model.
+                Otherwise, the agents' models will be used,
+            model_settings: Model configuration settings. If set, will override Model settings set before on the agents.
+            collab_settings: Settings for how to handle handoffs between agents,
+            usage_limits: Usage limits that are applicable to the entire run. when None, default UsageLimits are used
+            instructions: Instructions[AgentDepsT] = additional instructions used for all agents.
+                Doesn't override any other instructions specified for the agents
+            max_agent_call_depth: Maximum depth of agent tool calls allowed. i.e. setting it to 1 will allow
+                Agent A calling Agent B as tool, will prevent Agent A calling Agent B calling Agent C. Doesn't relate to
+                handoffs. Defaults to 3
+            allow_parallel_agent_calls: Whether to allow parallel agent calls. Defaults to True
+            instrument_logfire: Whether to instruments Logfire. If true, logfire will be used if it can be imported and
+                has *already* been configured.
+        """
         super().__init__(agents,
                          router_agent,
                          final_agent=None,
@@ -45,6 +68,7 @@ class StarCollab(Collab[AgentDepsT, OutputDataT]):
                          instructions=instructions,
                          max_agent_call_depth=max_agent_call_depth,
                          max_handoffs=0,
+                         allow_parallel_agent_calls=allow_parallel_agent_calls,
                          instrument_logfire=instrument_logfire)
 
     def _build_topology(self):
@@ -100,58 +124,3 @@ class ForwardHandoffCollab(Collab[AgentDepsT, OutputDataT]):
             )
         for ag_num in range(len(self._agents) - 1):
             self._handoffs[self._agents[ag_num]] = (self._agents[ag_num + 1],)
-
-class HierarchyCollab(Collab[AgentDepsT, OutputDataT]):
-    """Hierarchy Collab."""
-
-    _planner: CollabAgent = field(repr=False)
-    _orchestrator_agents: Sequence[CollabAgent] = field(repr=False)
-    def __init__(
-        self,
-        planner: AbstractAgent | CollabAgent | tuple[AbstractAgent, str | None],
-        orchestrator_agents: dict[CollabAgent | tuple[AbstractAgent, str], list[CollabAgent | tuple[AbstractAgent, str] | Tool]],
-        router_agent: CollabAgent | AbstractAgent | tuple[AbstractAgent, str | None] | None = None,
-        name: str | None = None,
-        output_type: OutputDataT | None = None,
-        tools: Sequence[Tool | ToolFuncEither[AgentDepsT, ...]] | None = None,
-        model: Model | KnownModelName | str | None = None,
-        model_settings: ModelSettings | None = None,
-        collab_settings: CollabSettings | None = None,
-        usage_limits: UsageLimits | None = None,
-        instructions: Instructions[AgentDepsT] = None,
-        max_agent_call_depth: int = 3,
-        instrument_logfire: bool = True,
-    ) -> None:
-        self._planner = self._normalize_agent(planner)
-        # Normalize orchestrator mapping: keys -> CollabAgent, values -> list[CollabAgent|Tool]
-        normalized_map: dict[CollabAgent, list[CollabAgent | Tool]] = {}
-        for key, vals in orchestrator_agents.items():
-            norm_key = self._normalize_agent(key)
-            norm_vals: list[CollabAgent | Tool] = []
-            for v in vals:
-                # Tools should be preserved as-is
-                if isinstance(v, Tool):
-                    norm_vals.append(v)
-                else:
-                    norm_vals.append(self._normalize_agent(v))
-            normalized_map[norm_key] = norm_vals
-        # Store both a sequence of orchestrator agents and the mapping for use in topology building
-        self._orchestrator_agents = list(normalized_map.keys())
-        self._orchestrator_map = normalized_map
-        super().__init__([],
-                         router_agent,
-                         final_agent=None,
-                         name=name,
-                         output_type=output_type,
-                         tools=tools,
-                         model=model,
-                         model_settings=model_settings,
-                         collab_settings=collab_settings,
-                         usage_limits=usage_limits,
-                         instructions=instructions,
-                         max_agent_call_depth=max_agent_call_depth,
-                         max_handoffs=0,
-                         instrument_logfire=instrument_logfire)
-
-    def _build_topology(self):
-        pass

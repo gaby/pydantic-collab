@@ -129,7 +129,7 @@ class CollabRunResult(Generic[OutputDataT]):
     iterations: int = 0
     """Number of agent handoffs executed. does not include agent tool call"""
     final_agent: str = ''
-    """Name of the agent that produced final output. Right now can be forseeable,
+    """Name of the agent that produced final output. Right now can be foreseeable,
      in the future possibly not"""
     max_iterations_reached: bool = False
     """Whether the iteration limit was hit and it was stopped unplanned"""

@@ -3,12 +3,12 @@ name = "pydantic_collab"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
+dynamic = [
+ "version",
+]
 dependencies = [
     "pydantic>=2.12.5",
     "pydantic_ai_slim>=1.36.0",
-]
-dynamic = [
- "version",
 ]
 [build-system]
 requires = ["hatchling"]
@@ -19,6 +19,7 @@ packages = ["pydantic_collab"]
 
 [tool.hatch.version]
 path = "pydantic_collab/__init__.py"
+
 [project.optional-dependencies]
 viz = [
     "graphviz>=0.20.3",
@@ -32,7 +33,6 @@ examples = [
     "logfire>=4.16.0",
     "pydantic_ai>=1.36.0",
     "opentelemetry-instrumentation-httpx>=0.60b1",
-
 ]
 [dependency-groups]
 lint = ["pyright>=1.1.390", "ruff>=0.6.9"]
@@ -109,3 +109,8 @@ executionEnvironments = [
     { root = "tests", reportUnusedFunction = false, reportPrivateImportUsage = false },
 ]
 exclude = []
+
+[tool.codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = '.git*,*.lock'
+check-hidden = false

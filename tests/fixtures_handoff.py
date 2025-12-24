@@ -1,5 +1,4 @@
-"""
-Test fixtures for realistic handoff and data passing scenarios.
+"""Test fixtures for realistic handoff and data passing scenarios.
 
 These fixtures are based on actual pydantic_ai message structures captured from real model runs.
 They allow testing handoff control and data passing without requiring live model calls.
@@ -8,16 +7,15 @@ from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
     SystemPromptPart,
-    UserPromptPart,
     TextPart,
     ToolCallPart,
     ToolReturnPart,
+    UserPromptPart,
 )
-
 
 # Fixture: Simple text response leading to handoff
 SIMPLE_TEXT_RESPONSE = ModelResponse(
-    parts=[TextPart(content="Data processed successfully. Ready for analysis.")],
+    parts=[TextPart(content='Data processed successfully. Ready for analysis.')],
     timestamp='2024-01-01T00:00:00Z',
 )
 

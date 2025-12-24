@@ -3,7 +3,7 @@ import pytest
 from pydantic_ai import Agent, Tool
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import CollabAgent, Collab, HandOffBase, StarCollab, ForwardHandoffCollab, MeshCollab
+from pydantic_collab import Collab, CollabAgent, ForwardHandoffCollab, HandOffBase, MeshCollab, StarCollab
 
 
 @pytest.fixture()
@@ -29,7 +29,7 @@ async def test_handoff_includes_conversation_and_tool_calls():
     async def fake_tool(q: str) -> str:
         return f'TOOL({q})'
 
-    tool = Tool(fake_tool, takes_ctx=False)
+    Tool(fake_tool, takes_ctx=False)
 
     swarm = StarCollab(
         agents=[
@@ -62,7 +62,7 @@ async def test_handoff_excludes_conversation_but_includes_tool_calls():
     async def fake_search(q: str) -> str:
         return f'RESULTS({q})'
 
-    search_tool = Tool(fake_search, takes_ctx=False)
+    Tool(fake_search, takes_ctx=False)
 
     swarm = StarCollab(
         agents=[
@@ -126,7 +126,7 @@ async def test_tool_call_with_custom_tool():
     async def fetch_data(key: str) -> str:
         return f'DATA[{key}]'
 
-    data_tool = Tool(fetch_data, takes_ctx=False)
+    Tool(fetch_data, takes_ctx=False)
     
     agent1 = make_test_agent('Agent1', model)
     agent2 = make_test_agent('Agent2', model)
@@ -553,7 +553,7 @@ async def test_agent_with_both_tools_and_handoffs():
     async def helper_tool(task: str) -> str:
         return f'PROCESSED[{task}]'
     
-    tool = Tool(helper_tool, takes_ctx=False)
+    Tool(helper_tool, takes_ctx=False)
     
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
@@ -589,7 +589,7 @@ async def test_multiple_agents_with_shared_tools():
     async def shared_tool(input: str) -> str:
         return f'SHARED[{input}]'
     
-    tool = Tool(shared_tool, takes_ctx=False)
+    Tool(shared_tool, takes_ctx=False)
     
     agent1 = make_test_agent('Agent1', model)
     agent2 = make_test_agent('Agent2', model)

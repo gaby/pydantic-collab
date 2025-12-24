@@ -1,18 +1,16 @@
-"""
-Tests for context and data passing control during handoffs.
+"""Tests for context and data passing control during handoffs.
 
 These tests verify that conversation history, tool call results,
 and other context can be selectively included or excluded during handoffs.
 """
 import pytest
 from pydantic_ai.models.test import TestModel
-from pydantic_ai import Tool
 
 from pydantic_collab import (
-    ForwardHandoffCollab,
     CollabAgent,
-    HandOffBase,
     CollabSettings,
+    ForwardHandoffCollab,
+    HandOffBase,
 )
 from tests.test_handoff_tool_control import make_test_agent
 
