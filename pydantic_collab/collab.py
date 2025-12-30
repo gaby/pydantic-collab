@@ -75,9 +75,6 @@ if TYPE_CHECKING:
         matplotlib = None
 
 
-
-
-
 @dataclass
 class Collab(Generic[AgentDepsT, OutputDataT]):
     """Orchestrates a multi-agent system from declarative connections.
@@ -96,6 +93,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             connections=(conn1, conn2)
         ).run("Hello!")
     """
+
     agents: Sequence[CollabAgent | tuple[AbstractAgent, str | None]]
     """
     All agents participating in the Collab, Can be either:
@@ -129,7 +127,9 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
     # Internal state
 
     _instrument_logfire: bool = field(init=False, default=True)
-    _agent_tools: dict[CollabAgent, tuple[Any, ...]] = field(init=False, default_factory=lambda: defaultdict(tuple), repr=False)
+    _agent_tools: dict[CollabAgent, tuple[Any, ...]] = field(
+        init=False, default_factory=lambda: defaultdict(tuple), repr=False
+    )
     _agents: tuple[CollabAgent, ...] = field(default_factory=tuple, init=False, repr=False)
 
     _collab_settings: CollabSettings = field(init=False, default_factory=CollabSettings)
@@ -138,7 +138,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
     _toolsets: tuple[AbstractToolset, ...] = field(default_factory=tuple, init=False, repr=False)
     _user_toolset: FunctionToolset = field(init=False, repr=False)
     _dynamic_toolsets: list[Any] = field(init=False, default_factory=list, repr=False)
-    _toolset_by_agent: dict[CollabAgent, Any]  = field(init=False, default_factory=dict, repr=False)
+    _toolset_by_agent: dict[CollabAgent, Any] = field(init=False, default_factory=dict, repr=False)
     _handoffs: dict[CollabAgent, tuple[CollabAgent, ...]] = field(init=False, default_factory=dict, repr=False)
     _name_to_agent: dict[str, CollabAgent] = field(init=False, default_factory=dict[str, CollabAgent], repr=False)
     _instructions: Any = field(init=False, default_factory=tuple, repr=False)
@@ -159,6 +159,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         max_handoffs: int = 10,
         output_type: OutputDataT | None = None,
         tools: Sequence[Tool | ToolFuncEither[AgentDepsT, ...]] | None = None,
+        toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         model: Model | KnownModelName | str | None = None,
         model_settings: ModelSettings | None = None,
         collab_settings: CollabSettings | None = None,
@@ -183,6 +184,9 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                 0 means no handoffs. defaults to 0.
             output_type: Expected output type; overrides the final_agent's output type if specified,
             tools: tools to add to all agents, in addition to any tools already specified for the agents.
+            toolsets: Toolsets to register with all the agents in the collab, including MCP servers and
+                functions which take a run context
+
             model: When set, would use this model for all the agents and override their model.
                 Otherwise, the agents' models will be used,
             model_settings: Model configuration settings. If set, will override Model settings set before on the agents.
@@ -229,7 +233,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             self._user_toolset = FunctionToolset(tuple(tools))
         else:
             self._user_toolset = FunctionToolset()
-        self._toolsets = (self._user_toolset,)
+        self._toolsets = (self._user_toolset, *(toolsets or ()))
 
         # Initialize public fields
         self.name = name
@@ -262,16 +266,18 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
     def _get_explicit_handoff_model(self, handoff_agents: Sequence[CollabAgent]) -> type[HandOffBase[Any]]:
         from pydantic import Field
+
         if not handoff_agents:
             raise ValueError('No handoff agents specified, nothing to do with handoff model...')
         # Build a runtime-enforced field that accepts any of the provided agent names
         # We can't use a variable inside a Literal[] in typing expressions at runtime,
         # so keep the annotation generic and rely on pydantic Field validation.
         names = tuple[str, ...](ho.name for ho in handoff_agents)
+
         class ExplicitHandoffModel(self._handoff_model):
             next_agent: str = Field(description='Name of the agent to route to', examples=list(names))
-        return ExplicitHandoffModel
 
+        return ExplicitHandoffModel
 
     def _normalize_agent(
         self,
@@ -348,7 +354,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         # Not found in _agents, use the normalized version
         return normalized
 
-
     def __repr__(self) -> str:
         """Return a comprehensive string representation of the Collab."""
         return (
@@ -411,10 +416,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         Returns:
             dict[str, tuple[str, ...]]: Mapping of agent names to callable agent names.
         """
-        return {
-            agent.name: tuple(conn.name for conn in conns)
-            for agent, conns in self._agent_tools.items()
-        }
+        return {agent.name: tuple(conn.name for conn in conns) for agent, conns in self._agent_tools.items()}
 
     @property
     def handoffs(self) -> dict[str, tuple[str, ...]]:
@@ -423,10 +425,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         Returns:
             dict[str, tuple[str, ...]]: Mapping of agent names to handoff target names.
         """
-        return {
-            agent.name: tuple(ho.name for ho in handoff_list)
-            for agent, handoff_list in self._handoffs.items()
-        }
+        return {agent.name: tuple(ho.name for ho in handoff_list) for agent, handoff_list in self._handoffs.items()}
 
     @property
     def has_handoffs(self) -> bool:
@@ -469,7 +468,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                 handoff_pairs.append(f'{agent.name}→{target.name}')
 
         if handoff_pairs:
-            lines.append(f"Handoffs (→): {', '.join(handoff_pairs)}")
+            lines.append(f'Handoffs (→): {", ".join(handoff_pairs)}')
         else:
             lines.append('Handoffs: none')
         return '\n'.join(lines)
@@ -513,7 +512,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             collab.visualize_topology(save_path='my_collab.png', show=True)
         """
         from ._viz import render_topology
-        
+
         return render_topology(
             agents=self._agents,
             agent_tools=self._agent_tools,
@@ -554,9 +553,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             CollabError: If starting_agent is not the same as final_agent.
         """
         if self.starting_agent is not self.final_agent:
-            raise CollabError(
-                msg or 'This mode starting agent to be same as final agent'
-            )
+            raise CollabError(msg or 'This mode starting agent to be same as final agent')
 
     def _build_topology(self) -> None:
         """Build the agent topology from connections using edges.
@@ -594,9 +591,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                 for called_agent_obj in agent.agent_handoffs:
                     called_agent_collab = self._normalize_agent(called_agent_obj)
                     if called_agent_collab is agent:
-                        raise CollabError(
-                            f'Agent {called_agent_obj} cannot call itself!'
-                        )
+                        raise CollabError(f'Agent {called_agent_obj} cannot call itself!')
                     handoffs.append(called_agent_collab)
             self._handoffs[agent] = tuple(handoffs)
             self._agent_tools[agent] = tuple(connections)
@@ -615,7 +610,9 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         if self.starting_agent is self.final_agent:
             return  # No handoffs needed, topology is trivially valid
 
-        def reachable_from(start: CollabAgent, adjacency: dict[CollabAgent, Collection[CollabAgent]]) -> set[CollabAgent]:
+        def reachable_from(
+            start: CollabAgent, adjacency: dict[CollabAgent, Collection[CollabAgent]]
+        ) -> set[CollabAgent]:
             """BFS to find all agents reachable from start via adjacency."""
             visited = {start}
             frontier = [start]
@@ -646,15 +643,15 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             raise CollabError(
                 f"Starting agent '{start_agent.name}' has no handoff path to "
                 f"final agent '{final_agent.name}'. "
-                f"Reachable agents: {sorted(a.name for a in reachable)}"
+                f'Reachable agents: {sorted(a.name for a in reachable)}'
             )
 
         # Check 2: Every reachable agent must be able to reach final (catches dead ends + inescapable cycles)
         dead_ends = sorted(a.name for a in reachable - can_reach_final)
         if dead_ends:
             raise CollabError(
-                f"Dead-end agents detected: {dead_ends}. "
-                f"These agents can receive handoffs but have no path to final agent "
+                f'Dead-end agents detected: {dead_ends}. '
+                f'These agents can receive handoffs but have no path to final agent '
                 f"'{final_agent.name}'."
             )
 
@@ -747,22 +744,23 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         )
         prompt_builder = self._collab_settings.prompt_builder or default_build_agent_prompt
         info_about_agents = prompt_builder(prompt_ctx)
-        user_prompt = (f'{info_about_agents}\n\n{context_from_handoff or ""}'.strip() +
-                               f'\n\n# Query: {query}')
+        user_prompt = f'{info_about_agents}\n\n{context_from_handoff or ""}'.strip() + f'\n\n# Query: {query}'
         toolsets = (*self._toolsets, *self._dynamic_toolsets, self._toolset_by_agent[c_agent])
         if tool_agents:
             tool_call = self._get_agent_call_tool(c_agent, state, usage, max_agent_calls_depths_allowed, deps)
             toolsets = (*toolsets, FunctionToolset((tool_call,)))
 
         self._already_handed_off.add(c_agent)
+
         # Run the c_agent with the constrained output type, check time it takes to run
         start_time = datetime.datetime.now()
+
         # We do this to make sure MCPs are initialized.
         # TODO: prevent doing a lot of entering into an agent called more than once.
         async with c_agent.agent as agent:
-            run_result:  AgentRunResult[output_type] = await agent.run(
+            run_result: AgentRunResult[output_type] = await agent.run(
                 user_prompt=user_prompt,
-                deps=deps.get(c_agent.name, None) if c_agent.requires_deps else None,
+                deps=deps.get(c_agent.name) if c_agent.requires_deps else None,
                 output_type=output_type,
                 toolsets=toolsets,
                 usage_limits=self.usage_limits,
@@ -775,14 +773,18 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         run_time = time.time() - start_time.toordinal()
         output: output_type = run_result.output
         # Get output data
-        result = AgentRunSummary(agent_name=c_agent.name, messages=run_result.all_messages(), start_time=start_time,
-                                 run_time=run_time, output=output, usage=run_result.usage())
+        result = AgentRunSummary(
+            agent_name=c_agent.name,
+            messages=run_result.all_messages(),
+            start_time=start_time,
+            run_time=run_time,
+            output=output,
+            usage=run_result.usage(),
+        )
         state.messages.append(result)
         return result
 
-    async def run(self,
-                  query: str,
-                  deps: AgentDepsT | dict[t_agent_desc, AgentDepsT] | None = None) -> CollabRunResult:
+    async def run(self, query: str, deps: AgentDepsT | dict[t_agent_desc, AgentDepsT] | None = None) -> CollabRunResult:
         """Run the Collab with the given query.
 
         Executes the Collab starting from the starting_agent and following
@@ -832,13 +834,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
             # Run current agent
             output: AgentRunSummary = await self._run_agent(
-                current_agent,
-                current_query,
-                handoff_data_str,
-                [],
-                state,
-                usage=usage,
-                deps=deps_parsed
+                current_agent, current_query, handoff_data_str, [], state, usage=usage, deps=deps_parsed
             )
             usage, output_data = output.usage, output.output
             state.record_execution(current_agent_name, current_query, output_data)
@@ -856,11 +852,10 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             # from dynamically handing off to arbitrary agents and helps avoid
             # runaway loops caused by unexpected routing.
             # Generallt it's unnecessary as pydantic already enforces it
-            if new_agent not in  self._get_allowed_handoff_targets(current_agent):
+            if new_agent not in self._get_allowed_handoff_targets(current_agent):
                 raise CollabError(f"Can't hand off agent {new_agent} to invalid handoff target.")
             if self._logger is not None:
                 self._logger.info(f'{current_agent_name} is handing off to {output_data.next_agent}.')
-
 
             hod = HandoffData(
                 previous_handoff_str=handoff_data_str if output_data.include_previous_handoff else None,
@@ -868,7 +863,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                 caller_agent_name=current_agent_name,
                 message_history=output.messages if output_data.include_conversation else None,
                 include_thinking=output_data.include_thinking,
-                include_tool_calls_with_callee=output_data.include_tool_calls_with_callee
+                include_tool_calls_with_callee=output_data.include_tool_calls_with_callee,
             )
             handoff_data_str = context_builder_func(hod)
             current_agent = new_agent
@@ -885,7 +880,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             max_iterations_reached=(handoff_count >= self.max_handoffs and isinstance(output.output, HandOffBase)),
             _state=state,
         )
-
 
     def get_output_type_for_agent(
         self,
@@ -916,12 +910,14 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             return our_handoff_model[inner_type]
         return inner_type
 
-    def _get_agent_call_tool(self,
-                             caller: CollabAgent,
-                             state: CollabState,
-                             usage: RunUsage,
-                             max_agent_calls_depths_allowed: int,
-                             deps: dict[t_agent_name, AgentDepsT]) -> Tool:
+    def _get_agent_call_tool(
+        self,
+        caller: CollabAgent,
+        state: CollabState,
+        usage: RunUsage,
+        max_agent_calls_depths_allowed: int,
+        deps: dict[t_agent_name, AgentDepsT],
+    ) -> Tool:
         """This function is used to get the Tool that's used to use agent calls between agents.
 
         Args:
@@ -936,6 +932,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         """
         my_mem = {}
         callable_agents = [agent.name for agent in self._agent_tools[caller]]
+
         async def call_agent(
             agent_name: Literal[tuple(callable_agents)],
             input: Any,
@@ -951,11 +948,11 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             Returns:
                 The output of the agent
             """
-            next_agent = self._get_name_to_agent(agent_name, f"{caller.name} tried to route to {agent_name} but it's not reachable. ")
+            next_agent = self._get_name_to_agent(
+                agent_name, f"{caller.name} tried to route to {agent_name} but it's not reachable. "
+            )
             if next_agent not in self._agent_tools[caller]:
-                raise CollabError(
-                    f"Can't call agent {agent_name} from {caller.name} - not in allowed connections"
-                )
+                raise CollabError(f"Can't call agent {agent_name} from {caller.name} - not in allowed connections")
             inn_message_history = []
             if keep_memory_from_before:
                 if next_agent in my_mem:
@@ -971,21 +968,20 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                 usage,
                 is_tool_run=True,
                 max_agent_calls_depths_allowed=max_agent_calls_depths_allowed - 1,
-                deps=deps
+                deps=deps,
             )
 
             # TODO: deal with parallel tool calls to the same agent. Maybe forbid it if memory is set?
             if keep_memory_from_before or my_mem.get(next_agent, None) is None:
                 my_mem[next_agent] = resp.messages
             return resp.output
+
         # The use of sequential here is problematic in the sense that it does not allow this call to be in parallel
         # to any other call. TODO: fix that with some lock or more internal pydantic_ai mech?
         call_agent_tool = Tool(call_agent, takes_ctx=False, sequential=not self._allow_parallel_agent_calls)
         return call_agent_tool
 
-    def run_sync(self,
-                 query: str,
-                 deps: dict[t_agent_desc, AgentDepsT] | AgentDepsT | None = None) -> CollabRunResult:
+    def run_sync(self, query: str, deps: dict[t_agent_desc, AgentDepsT] | AgentDepsT | None = None) -> CollabRunResult:
         """Run the Collab with the given query.
 
         Executes the Collab starting from the starting_agent and following
@@ -1003,9 +999,12 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             CollabError: If an agent tries to hand off to invalid agent.
         """
         import asyncio
+
         return asyncio.run(self.run(query, deps=deps))
 
-    def _get_ts_by_agents(self, agents: Collection[str | CollabAgent | AbstractAgent] | str | CollabAgent | AbstractAgent | None) -> Collection[FunctionToolset]:
+    def _get_ts_by_agents(
+        self, agents: Collection[str | CollabAgent | AbstractAgent] | str | CollabAgent | AbstractAgent | None
+    ) -> Collection[FunctionToolset]:
         """Return FunctionToolset(s) for given agent descriptor(s).
 
         Accepts:
@@ -1022,15 +1021,11 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         if isinstance(agents, (CollabAgent, AbstractAgent)):
             return (self._toolset_by_agent[self._normalize_agent(agents)],)
         # iterable of agent descriptors
-        return tuple(
-            self._toolset_by_agent[self._normalize_agent(agent)]
-            for agent in agents
-        )
+        return tuple(self._toolset_by_agent[self._normalize_agent(agent)] for agent in agents)
 
     @property
     def is_instrumented(self) -> bool:
         return any(getattr(agent, '_instrument_default', False) for agent in self._agents)
-
 
     @overload
     def tool(self, func: ToolFuncContext[AgentDepsT, ToolParams], /) -> ToolFuncContext[AgentDepsT, ToolParams]: ...
@@ -1131,6 +1126,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                     timeout=timeout,
                 )
             return func_
+
         return tool_decorator if func is None else tool_decorator(func)
 
     @overload
@@ -1298,7 +1294,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
         return toolset_decorator if func is None else toolset_decorator(func)
 
-
     def _init_logfire(self):
         """Initialize logfire.
 
@@ -1321,10 +1316,10 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             self._logfire = logfire
         if self._logfire is None:
             import logging
+
             self._logger = logging.getLogger('pydantic_collab')
         else:
             self._logger = self._logfire
-
 
     def _validate_agents_have_needed_attrs(self):
         if len(self._name_to_agent) != len(self._agents):
