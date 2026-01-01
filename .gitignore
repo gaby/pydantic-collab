@@ -8,15 +8,22 @@ wheels/
 
 # Virtual environments
 .venv
-.env
+
+# AI Tools
 .qodo/
+.claude/
+.cursor/
+Auto Run Docs/
+
+# helpers
 .coverage/
 .idea/
 .logfire/
+
+# Cache
 .pytest_cache/
-.qodo/
 .ruff_cache/
 
-Auto Run Docs/
-
+# Secrets
+.env
 
