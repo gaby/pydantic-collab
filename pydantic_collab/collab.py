@@ -26,7 +26,9 @@ from pydantic_ai import (
     FunctionToolset,
     ModelRequest,
     ModelResponse,
+    ModelRetry,
     ModelSettings,
+    RunContext,
     RunUsage,
     Tool,
     ToolsetFunc,
@@ -747,7 +749,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         user_prompt = f'{info_about_agents}\n\n{context_from_handoff or ""}'.strip() + f'\n\n# Query: {query}'
         toolsets = (*self._toolsets, *self._dynamic_toolsets, self._toolset_by_agent[c_agent])
         if tool_agents:
-            tool_call = self._get_agent_call_tool(c_agent, state, usage, max_agent_calls_depths_allowed, deps)
+            tool_call = self._get_agent_call_tool(c_agent, state, max_agent_calls_depths_allowed, deps)
             toolsets = (*toolsets, FunctionToolset((tool_call,)))
 
         self._already_handed_off.add(c_agent)
@@ -801,85 +803,91 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         Raises:
             CollabError: If an agent tries to hand off to invalid agent.
         """
-        span = None
         if self._logfire is not None:
             span = self._logfire.span(f'{self.name or "Agent"} Collab Run').__enter__()
-        deps_parsed: dict[t_agent_name, AgentDepsT] = {}
-        if isinstance(deps, dict):
-            dep_obj: Any
-            for desc, dep_obj in deps.items():
-                deps_parsed[self._get_name_from_agentdesc(desc)] = dep_obj
-        elif deps is not None:
-            deps_parsed = {a.name: deps for a in self._agents}
+        else:
+            span = None
+        try:
+            deps_parsed: dict[t_agent_name, AgentDepsT] = {}
+            if isinstance(deps, dict):
+                dep_obj: Any
+                for desc, dep_obj in deps.items():
+                    deps_parsed[self._get_name_from_agentdesc(desc)] = dep_obj
+            elif deps is not None:
+                deps_parsed = {a.name: deps for a in self._agents}
 
-        state = CollabState(query=query)
-        usage = RunUsage()
-        # Start with the starting agent
-        current_agent_name = self.starting_agent.name
-        current_agent = self.starting_agent
-        current_query: Any = query
+            state = CollabState(query=query)
+            usage = RunUsage()
+            # Start with the starting agent
+            current_agent_name = self.starting_agent.name
+            current_agent = self.starting_agent
+            current_query: Any = query
 
-        # Handoff options (default for first agent)
-        output: AgentRunSummary | None = None
-        handoff_count = -1  # Track actual iterations
-        # Defensive cap to avoid runaway loops causing excessive model requests
-        handoff_data_str = ''
-        context_builder_func = self._collab_settings.context_builder or get_context
-        if self._logger is not None:
+            # Handoff options (default for first agent)
+            output: AgentRunSummary | None = None
+            handoff_count = -1  # Track actual iterations
+            # Defensive cap to avoid runaway loops causing excessive model requests
+            handoff_data_str = ''
+            context_builder_func = self._collab_settings.context_builder or get_context
             self._logger.info(f'Staring collab: calling agent {current_agent_name}.')
-        while handoff_count < self.max_handoffs:
-            handoff_count += 1
-            # Track execution path
-            state.execution_path.append(current_agent_name)
+            while handoff_count < self.max_handoffs:
+                handoff_count += 1
+                # Track execution path
+                state.execution_path.append(current_agent_name)
 
-            # Run current agent
-            output: AgentRunSummary = await self._run_agent(
-                current_agent, current_query, handoff_data_str, [], state, usage=usage, deps=deps_parsed
+                # Run current agent
+                output: AgentRunSummary = await self._run_agent(
+                    current_agent, current_query, handoff_data_str, [], state, usage=usage, deps=deps_parsed
+                )
+                usage, output_data = output.usage, output.output
+                state.record_execution(current_agent_name, current_query, output_data)
+
+                if not isinstance(output_data, HandOffBase):
+                    state.final_output = output_data
+                    break
+
+                # Here we assume output_data is HandOff
+                # Verify the handoff target is a known agent
+                new_agent = self._get_name_to_agent(
+                    output_data.next_agent, f'Invalid agent name: {output_data.next_agent}'
+                )
+
+                # Enforce declared handoff permissions: an agent may only hand off to
+                # targets listed in its `agent_handoffs`. This prevents agents
+                # from dynamically handing off to arbitrary agents and helps avoid
+                # runaway loops caused by unexpected routing.
+                # Generallt it's unnecessary as pydantic already enforces it
+                if new_agent not in self._get_allowed_handoff_targets(current_agent):
+                    raise CollabError(f"Can't hand off agent {new_agent} to invalid handoff target.")
+                if self._logger is not None:
+                    self._logger.info(f'{current_agent_name} is handing off to {output_data.next_agent}.')
+
+                hod = HandoffData(
+                    previous_handoff_str=handoff_data_str if output_data.include_previous_handoff else None,
+                    callee_agent_name=new_agent.name,
+                    caller_agent_name=current_agent_name,
+                    message_history=output.messages if output_data.include_conversation else None,
+                    include_thinking=output_data.include_thinking,
+                    include_tool_calls_with_callee=output_data.include_tool_calls_with_callee,
+                )
+                handoff_data_str = context_builder_func(hod)
+                current_agent = new_agent
+                current_agent_name = current_agent.name
+                current_query = output_data.query
+
+            return CollabRunResult(
+                output=output.output,
+                usage=usage,
+                iterations=handoff_count + 1,
+                final_agent=current_agent_name,
+                max_iterations_reached=(handoff_count >= self.max_handoffs and isinstance(output.output, HandOffBase)),
+                _state=state,
             )
-            usage, output_data = output.usage, output.output
-            state.record_execution(current_agent_name, current_query, output_data)
-
-            if not isinstance(output_data, HandOffBase):
-                state.final_output = output_data
-                break
-
-            # Here we assume output_data is HandOff
-            # Verify the handoff target is a known agent
-            new_agent = self._get_name_to_agent(output_data.next_agent, f'Invalid agent name: {output_data.next_agent}')
-
-            # Enforce declared handoff permissions: an agent may only hand off to
-            # targets listed in its `agent_handoffs`. This prevents agents
-            # from dynamically handing off to arbitrary agents and helps avoid
-            # runaway loops caused by unexpected routing.
-            # Generallt it's unnecessary as pydantic already enforces it
-            if new_agent not in self._get_allowed_handoff_targets(current_agent):
-                raise CollabError(f"Can't hand off agent {new_agent} to invalid handoff target.")
-            if self._logger is not None:
-                self._logger.info(f'{current_agent_name} is handing off to {output_data.next_agent}.')
-
-            hod = HandoffData(
-                previous_handoff_str=handoff_data_str if output_data.include_previous_handoff else None,
-                callee_agent_name=new_agent.name,
-                caller_agent_name=current_agent_name,
-                message_history=output.messages if output_data.include_conversation else None,
-                include_thinking=output_data.include_thinking,
-                include_tool_calls_with_callee=output_data.include_tool_calls_with_callee,
-            )
-            handoff_data_str = context_builder_func(hod)
-            current_agent = new_agent
-            current_agent_name = current_agent.name
-            current_query = output_data.query
-
-        if span is not None:
-            span.__exit__(None, None, None)
-        return CollabRunResult(
-            output=output.output,
-            usage=usage,
-            iterations=handoff_count + 1,
-            final_agent=current_agent_name,
-            max_iterations_reached=(handoff_count >= self.max_handoffs and isinstance(output.output, HandOffBase)),
-            _state=state,
-        )
+        except Exception as e:
+            self._logger.error(f'Collab failed with exception: {e}')
+        finally:
+            if span is not None:
+                span.__exit__(None, None, None)
 
     def get_output_type_for_agent(
         self,
@@ -914,7 +922,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         self,
         caller: CollabAgent,
         state: CollabState,
-        usage: RunUsage,
         max_agent_calls_depths_allowed: int,
         deps: dict[t_agent_name, AgentDepsT],
     ) -> Tool:
@@ -931,10 +938,11 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             Tool that's used to use agent calls between agents
         """
         my_mem = {}
-        callable_agents = [agent.name for agent in self._agent_tools[caller]]
+        callable_agents = tuple(agent.name for agent in self._agent_tools[caller])
 
-        async def call_agent(
-            agent_name: Literal[tuple(callable_agents)],
+        async def call_agent(  # noqa: D417
+            ctx: RunContext,
+            agent_name: Literal[callable_agents],
             input: Any,
             keep_memory_from_before: bool = True,
         ) -> Any:
@@ -951,25 +959,40 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             next_agent = self._get_name_to_agent(
                 agent_name, f"{caller.name} tried to route to {agent_name} but it's not reachable. "
             )
+
+            # This is not really necessary as pydantic-ai already verifies that using the LIteral. Keeping because we
+            # might change chat.
             if next_agent not in self._agent_tools[caller]:
                 raise CollabError(f"Can't call agent {agent_name} from {caller.name} - not in allowed connections")
-            inn_message_history = []
-            if keep_memory_from_before:
-                if next_agent in my_mem:
-                    inn_message_history = my_mem[next_agent]
+
+            # We don't count this tool in usage. TODO: create a separate usage statsic for it
+            ctx.usage.tool_calls -= 1
+            inner_message_history = []
+            if keep_memory_from_before and next_agent in my_mem:
+                inner_message_history = my_mem[next_agent]
             if self._logger is not None:
                 self._logger.info(f'Calling agent {agent_name} from {caller.name}')
-            resp = await self._run_agent(
-                next_agent,
-                input,
-                None,
-                inn_message_history,
-                state,
-                usage,
-                is_tool_run=True,
-                max_agent_calls_depths_allowed=max_agent_calls_depths_allowed - 1,
-                deps=deps,
-            )
+            try:
+                resp = await self._run_agent(
+                    next_agent,
+                    input,
+                    None,
+                    inner_message_history,
+                    state,
+                    ctx.usage,
+                    is_tool_run=True,
+                    max_agent_calls_depths_allowed=max_agent_calls_depths_allowed - 1,
+                    deps=deps,
+                )
+            # We can't really catch an exception in after agent handoff and then hand it off to some other agent,
+            # But it's possibles to do that here, that's why the try except is not inside run_agent but rather here
+            # Errors here should generally be errors from tools the other Agent ran.
+            except Exception as e:
+                self._logger.error(f'Error calling agent {agent_name} from {caller.name}: {e}')
+                raise ModelRetry(
+                    f'Calling agent {agent_name} failed unexpectedly with error {e}. '
+                    'decide according to the error how to proceed'
+                )
 
             # TODO: deal with parallel tool calls to the same agent. Maybe forbid it if memory is set?
             if keep_memory_from_before or my_mem.get(next_agent, None) is None:
@@ -978,7 +1001,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
         # The use of sequential here is problematic in the sense that it does not allow this call to be in parallel
         # to any other call. TODO: fix that with some lock or more internal pydantic_ai mech?
-        call_agent_tool = Tool(call_agent, takes_ctx=False, sequential=not self._allow_parallel_agent_calls)
+        call_agent_tool = Tool(call_agent, takes_ctx=True, sequential=not self._allow_parallel_agent_calls)
         return call_agent_tool
 
     def run_sync(self, query: str, deps: dict[t_agent_desc, AgentDepsT] | AgentDepsT | None = None) -> CollabRunResult:

@@ -211,6 +211,7 @@ class CollabAgent:
     """Other agents this agent can hand off to (transfer control).
     Can be agent names (str), AbstractAgent instances, or CollabAgent instances."""
     name: str | None = None
+    """Name of this Collab Agent. Used by other agents for choosing how to hand over"""
 
     def __init__(
         self,
