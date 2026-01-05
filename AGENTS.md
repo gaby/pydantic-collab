@@ -61,7 +61,7 @@ Client code (examples/tests) → Collab orchestration layer → pydantic-ai agen
 - **`Collab` (pydantic_collab/collab.py)** – Central orchestrator; validates graphs, manages handoffs/tool calls, tracks execution history, and exposes sync/async run APIs.
 - **`CollabAgent` & settings (pydantic_collab/_types.py)** – Strongly-typed wrappers describing each agent’s capabilities, limits, and state; includes `CollabSettings`, `HandOffBase`, `CollabRunResult`, and runtime `CollabState`.
 - **Prompt/context utilities (pydantic_collab/_utils.py)** – Convert message histories to text, extract agent-to-agent tool calls, and build descriptive prompts via `default_build_agent_prompt`.
-- **Specialized topologies (pydantic_collab/custom_collabs.py)** – `ForwardHandoffCollab`, `StarCollab`, `MeshCollab`, and `HierarchyCollab` preconfigure `_build_topology` to reduce boilerplate.
+- **Specialized topologies (pydantic_collab/custom_collabs.py)** – `PiplineCollab`, `StarCollab`, `MeshCollab`, and `HierarchyCollab` preconfigure `_build_topology` to reduce boilerplate.
 
 ### Data Flow
 1. User declares `Collab` (or a custom subclass) with agent tuples or `CollabAgent` objects.
@@ -107,7 +107,7 @@ agent_collab_poc/
 | `pydantic_collab/collab.py` | Implements `Collab` with topology normalization, run loop, and history tracking | Extending orchestration behavior, enforcing new limits, or instrumenting runs |
 | `pydantic_collab/_types.py` | Houses `CollabAgent`, `CollabSettings`, `CollabState`, `HandOffBase`, and result structures | Changing how agents are described, how context is stored, or adjusting settings validation |
 | `pydantic_collab/_utils.py` | Builds prompts and handoff context, extracts tool-call transcripts | Updating prompt guidance, altering context-sharing rules, or adding new diagnostics |
-| `pydantic_collab/custom_collabs.py` | Ready-made subclasses (`ForwardHandoffCollab`, `StarCollab`, `MeshCollab`, `HierarchyCollab`) | Adding a new topology preset or tweaking `_build_topology` logic |
+| `pydantic_collab/custom_collabs.py` | Ready-made subclasses (`PiplineCollab`, `StarCollab`, `MeshCollab`, `HierarchyCollab`) | Adding a new topology preset or tweaking `_build_topology` logic |
 | `examples/0*.py` | Progressive demos covering chains, meshes, parallel fan-out, tool routing, visualization, etc. | Reproduce bugs, document new capabilities, or provide sample topologies |
 | `examples/example_tools.py` | Shared tool implementations used across demos | Add reusable tools or dependencies surfaced in examples |
 | `tests/test_topology_validation.py` | Ensures every agent can reach the final output and detects cycles/dead ends | When editing validation rules or `_build_topology` internals |

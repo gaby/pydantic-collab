@@ -1,5 +1,4 @@
-"""
-Example 6: Content Creation Pipeline
+"""Example 6: Content Creation Pipeline
 =====================================
 
 Topology: Intake → Researcher → Writer → Publisher (forward handoff chain)
@@ -15,21 +14,20 @@ import asyncio
 import logfire
 from pydantic_ai import Agent
 
-from pydantic_collab import Collab, CollabAgent, ForwardHandoffCollab
+from pydantic_collab import CollabAgent, PiplineCollab
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
 logfire.instrument_httpx(capture_all=True)
 
-MODEL = "google-gla:gemini-2.0-flash"
+MODEL = 'google-gla:gemini-2.0-flash'
 
 
 def create_swarm():
     """Create content pipeline swarm."""
-
     intake = Agent(
         MODEL,
-        name="Intake",
+        name='Intake',
         system_prompt="""You are the intake agent for a content pipeline.
 1. Receive content requests
 2. Clarify the requirements
@@ -39,7 +37,7 @@ def create_swarm():
 
     researcher = Agent(
         MODEL,
-        name="Researcher",
+        name='Researcher',
         system_prompt="""You are a researcher. Your job is to:
 1. Receive content requirements from Intake
 2. Gather background information and facts
@@ -49,7 +47,7 @@ def create_swarm():
 
     writer = Agent(
         MODEL,
-        name="Writer",
+        name='Writer',
         system_prompt="""You are the content writer. Your job is to:
 1. Receive research from Researcher
 2. Create polished, engaging content
@@ -59,7 +57,7 @@ def create_swarm():
 
     publisher = Agent(
         MODEL,
-        name="Publisher",
+        name='Publisher',
         system_prompt="""You are the publisher. Your job is to:
 1. Receive draft content from Writer
 2. Format for publication
@@ -68,26 +66,26 @@ def create_swarm():
     )
 
     # Forward handoff chain: Intake → Researcher → Writer → Publisher
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
             CollabAgent(
                 agent=intake,
-                description="Intake - receives and clarifies content requests",
+                description='Intake - receives and clarifies content requests',
                 agent_calls=(),
             ),
             CollabAgent(
                 agent=researcher,
-                description="Researcher - gathers facts and background",
+                description='Researcher - gathers facts and background',
                 agent_calls=(),
             ),
             CollabAgent(
                 agent=writer,
-                description="Writer - creates polished content",
+                description='Writer - creates polished content',
                 agent_calls=(),
             ),
             CollabAgent(
                 agent=publisher,
-                description="Publisher - formats and publishes final content",
+                description='Publisher - formats and publishes final content',
                 agent_calls=(),
             ),
         ],
@@ -101,23 +99,23 @@ async def main():
     """Run the example."""
     swarm = create_swarm()
 
-    print("=== Content Creation Pipeline Example ===")
-    print("Topology: Intake → Researcher → Writer → Publisher")
+    print('=== Content Creation Pipeline Example ===')
+    print('Topology: Intake → Researcher → Writer → Publisher')
     print()
 
-    query = "Write a blog post about the future of AI in healthcare"
-    print(f"Query: {query}")
-    print("-" * 60)
+    query = 'Write a blog post about the future of AI in healthcare'
+    print(f'Query: {query}')
+    print('-' * 60)
 
     result = await swarm.run(query)
 
-    print(f"Response: {result.output}")
-    print(f"Final agent: {result.final_agent}")
-    print(f"Iterations: {result.iterations}")
-    print(f"Path: {' → '.join(result.execution_path)}")
+    print(f'Response: {result.output}')
+    print(f'Final agent: {result.final_agent}')
+    print(f'Iterations: {result.iterations}')
+    print(f'Path: {" → ".join(result.execution_path)}')
     print()
     print(result.print_execution_flow())
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())

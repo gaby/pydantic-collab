@@ -15,13 +15,13 @@ Define agent topologies declaratively. Agents communicate through **tool calls**
 ```python
 from pydantic_ai import Agent
 from pydantic_ai.builtin_tools import WebSearchTool
-from pydantic_collab import ForwardHandoffCollab
+from pydantic_collab import PiplineCollab
 
 intake = Agent(name="Intake", system_prompt="Summarize requests and relevant data from the internet",
                builtin_tools=[WebSearchTool()])
 reporter = Agent(name="Reporter", system_prompt="Create final response")
 
-swarm = ForwardHandoffCollab(
+swarm = PiplineCollab(
     agents=[(intake, "Intake agent"), (reporter, "Reporter agent")],
     model="openai:gpt-5.2"
 )
@@ -59,9 +59,9 @@ Use when an agent's part is done and control should transfer:
 
 ```python
 from pydantic_ai import Agent
-from pydantic_collab import ForwardHandoffCollab
+from pydantic_collab import PiplineCollab
 
-swarm = ForwardHandoffCollab(
+swarm = PiplineCollab(
     agents=[
         (Agent(name="Intake", system_prompt="Summarize and hand off"), "Intake"),
         (Agent(name="Analyst", system_prompt="Analyze and hand off"), "Analyst"),

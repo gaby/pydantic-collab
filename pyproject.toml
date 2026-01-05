@@ -46,9 +46,10 @@ package = true
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-include = [
-    "pydantic_collab/**/*.py",
-    #"tests/**/*.py"
+exclude = [
+    "build",
+    "examples",
+    "tests"
 ]
 
 [tool.ruff.lint]

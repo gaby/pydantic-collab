@@ -1,9 +1,7 @@
-"""Agent Graph - Multi-agent orchestration framework.
-
-Provides high-level abstractions for building multi-agent systems with Pydantic AI.
-"""
+"""Pydantic Collab - a Multi-agent orchestration framework built on top of Pydantic-AI."""
 
 __version__ = '0.1.0'
+
 from ._types import (
     CollabAgent,
     CollabError,
@@ -14,7 +12,7 @@ from .collab import (
     Collab,
     CollabState,
 )
-from .custom_collabs import ForwardHandoffCollab, MeshCollab, StarCollab
+from .custom_collabs import MeshCollab, PiplineCollab, StarCollab
 
 __all__ = [
     # Core
@@ -22,7 +20,7 @@ __all__ = [
     'Collab',
     'CollabState',
     # Custom Collabs
-    'ForwardHandoffCollab',
+    'PiplineCollab',
     'MeshCollab',
     'StarCollab',
     # Prompt/Context builders

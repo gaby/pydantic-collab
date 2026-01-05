@@ -1,9 +1,8 @@
-
 import pytest
 from pydantic_ai import Agent, Tool
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import Collab, CollabAgent, ForwardHandoffCollab, MeshCollab, StarCollab
+from pydantic_collab import Collab, CollabAgent, MeshCollab, PiplineCollab, StarCollab
 from pydantic_collab._types import HandOffBase
 
 
@@ -95,15 +94,8 @@ async def test_tool_call_between_agents_star_topology():
 
     swarm = StarCollab(
         agents=[
-            CollabAgent(
-                agent=coordinator, 
-                description='Routes tasks',
-                agent_calls=('Worker',)
-            ),
-            CollabAgent(
-                agent=worker,
-                description='Does the work'
-            ),
+            CollabAgent(agent=coordinator, description='Routes tasks', agent_calls=('Worker',)),
+            CollabAgent(agent=worker, description='Does the work'),
         ],
         router_agent=coordinator,
         model=model,
@@ -128,21 +120,14 @@ async def test_tool_call_with_custom_tool():
         return f'DATA[{key}]'
 
     Tool(fetch_data, takes_ctx=False)
-    
+
     agent1 = make_test_agent('Agent1', model)
     agent2 = make_test_agent('Agent2', model)
 
     swarm = StarCollab(
         agents=[
-            CollabAgent(
-                agent=agent1,
-                description='Uses tools',
-                agent_calls=('Agent2',)
-            ),
-            CollabAgent(
-                agent=agent2,
-                description='Helper'
-            ),
+            CollabAgent(agent=agent1, description='Uses tools', agent_calls=('Agent2',)),
+            CollabAgent(agent=agent2, description='Helper'),
         ],
         router_agent=agent1,
         model=model,
@@ -159,7 +144,7 @@ async def test_multiple_tool_calls_chain():
     """Test chain of tool calls through multiple agents."""
     # Don't call tools - just verify topology
     model = TestModel(call_tools=[])
-    
+
     agent_a = make_test_agent('AgentA', model)
     agent_b = make_test_agent('AgentB', model)
     agent_c = make_test_agent('AgentC', model)
@@ -193,21 +178,15 @@ async def test_handoff_basic():
     model1 = TestModel(
         call_tools=[],  # Don't call any tools
         custom_output_args=HandOffBase(
-            next_agent='Agent2',
-            reasoning='Passing to Agent2',
-            query='step1 result',
-            include_conversation=True
-        )
+            next_agent='Agent2', reasoning='Passing to Agent2', query='step1 result', include_conversation=True
+        ),
     )
-    model2 = TestModel(
-        call_tools=[],
-        custom_output_text='final result'
-    )
-    
+    model2 = TestModel(call_tools=[], custom_output_text='final result')
+
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
             CollabAgent(agent=agent1, description='First', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Second'),
@@ -230,31 +209,18 @@ async def test_handoff_with_include_conversation():
     model1 = TestModel(
         call_tools=[],
         custom_output_args=HandOffBase(
-            next_agent='Finisher',
-            reasoning='Handing off',
-            query='task started',
-            include_conversation=True
-        )
+            next_agent='Finisher', reasoning='Handing off', query='task started', include_conversation=True
+        ),
     )
-    model2 = TestModel(
-        call_tools=[],
-        custom_output_text='task finished'
-    )
-    
+    model2 = TestModel(call_tools=[], custom_output_text='task finished')
+
     starter = make_test_agent('Starter', model1)
     finisher = make_test_agent('Finisher', model2)
 
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
-            CollabAgent(
-                agent=starter,
-                description='Starts task',
-                agent_handoffs=('Finisher',)
-            ),
-            CollabAgent(
-                agent=finisher,
-                description='Finishes task'
-            ),
+            CollabAgent(agent=starter, description='Starts task', agent_handoffs=('Finisher',)),
+            CollabAgent(agent=finisher, description='Finishes task'),
         ],
         starting_agent=starter,
         max_handoffs=3,
@@ -276,31 +242,18 @@ async def test_handoff_without_conversation():
     model1 = TestModel(
         call_tools=[],
         custom_output_args=HandOffBase(
-            next_agent='Analyzer',
-            reasoning='Processing complete',
-            query='data processed',
-            include_conversation=False
-        )
+            next_agent='Analyzer', reasoning='Processing complete', query='data processed', include_conversation=False
+        ),
     )
-    model2 = TestModel(
-        call_tools=[],
-        custom_output_text='data analyzed'
-    )
-    
+    model2 = TestModel(call_tools=[], custom_output_text='data analyzed')
+
     processor = make_test_agent('Processor', model1)
     analyzer = make_test_agent('Analyzer', model2)
 
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
-            CollabAgent(
-                agent=processor,
-                description='Processes data',
-                agent_handoffs=('Analyzer',)
-            ),
-            CollabAgent(
-                agent=analyzer,
-                description='Analyzes results'
-            ),
+            CollabAgent(agent=processor, description='Processes data', agent_handoffs=('Analyzer',)),
+            CollabAgent(agent=analyzer, description='Analyzes results'),
         ],
         starting_agent=processor,
         max_handoffs=3,
@@ -317,30 +270,19 @@ async def test_handoff_chain_three_agents():
     """Test handoff chain through three agents."""
     model1 = TestModel(
         call_tools=[],
-        custom_output_args=HandOffBase(
-            next_agent='Second',
-            reasoning='Step 1 complete',
-            query='first step done'
-        )
+        custom_output_args=HandOffBase(next_agent='Second', reasoning='Step 1 complete', query='first step done'),
     )
     model2 = TestModel(
         call_tools=[],
-        custom_output_args=HandOffBase(
-            next_agent='Third',
-            reasoning='Step 2 complete',
-            query='second step done'
-        )
+        custom_output_args=HandOffBase(next_agent='Third', reasoning='Step 2 complete', query='second step done'),
     )
-    model3 = TestModel(
-        call_tools=[],
-        custom_output_text='final result'
-    )
+    model3 = TestModel(call_tools=[], custom_output_text='final result')
 
     first = make_test_agent('First', model1)
     second = make_test_agent('Second', model2)
     third = make_test_agent('Third', model3)
 
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
             CollabAgent(agent=first, description='Step 1', agent_handoffs=('Second',)),
             CollabAgent(agent=second, description='Step 2', agent_handoffs=('Third',)),
@@ -416,29 +358,18 @@ async def test_forward_handoff_topology():
     """Test forward_handoff topology."""
     model1 = TestModel(
         call_tools=[],
-        custom_output_args=HandOffBase(
-            next_agent='Second',
-            reasoning='First step done',
-            query='step1 complete'
-        )
+        custom_output_args=HandOffBase(next_agent='Second', reasoning='First step done', query='step1 complete'),
     )
     model2 = TestModel(
         call_tools=[],
-        custom_output_args=HandOffBase(
-            next_agent='Third',
-            reasoning='Second step done',
-            query='step2 complete'
-        )
+        custom_output_args=HandOffBase(next_agent='Third', reasoning='Second step done', query='step2 complete'),
     )
-    model3 = TestModel(
-        call_tools=[],
-        custom_output_text='step3 complete'
-    )
+    model3 = TestModel(call_tools=[], custom_output_text='step3 complete')
     agent1 = make_test_agent('First', model1)
     agent2 = make_test_agent('Second', model2)
     agent3 = make_test_agent('Third', model3)
 
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Step 1', agent_handoffs=('Second',)),
             CollabAgent(agent=agent2, description='Step 2', agent_handoffs=('Third',)),
@@ -451,7 +382,7 @@ async def test_forward_handoff_topology():
     res = await run_swarm_and_get_state(swarm, 'Sequential processing')
 
     assert res.output is not None
-    # Check execution history has entries  
+    # Check execution history has entries
     assert len(res.execution_history) >= 1
     assert any(h['agent'] == 'First' for h in res.execution_history)
 
@@ -464,31 +395,18 @@ async def test_max_iterations_limit():
     """Test that max_iterations is enforced."""
     # Create a chain that would normally take 3 steps, but limit to 2
     model1 = TestModel(
-        call_tools=[],
-        custom_output_args=HandOffBase(
-            next_agent='Second',
-            reasoning='Step 1',
-            query='going to step 2'
-        )
+        call_tools=[], custom_output_args=HandOffBase(next_agent='Second', reasoning='Step 1', query='going to step 2')
     )
     model2 = TestModel(
-        call_tools=[],
-        custom_output_args=HandOffBase(
-            next_agent='Third',
-            reasoning='Step 2',
-            query='going to step 3'
-        )
+        call_tools=[], custom_output_args=HandOffBase(next_agent='Third', reasoning='Step 2', query='going to step 3')
     )
-    model3 = TestModel(
-        call_tools=[],
-        custom_output_text='done'
-    )
+    model3 = TestModel(call_tools=[], custom_output_text='done')
     agent1 = make_test_agent('First', model1)
     agent2 = make_test_agent('Second', model2)
     agent3 = make_test_agent('Third', model3)
 
     # Create a 3-agent chain but limit to 2 iterations
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
             CollabAgent(agent=agent1, description='First', agent_handoffs=('Second',)),
             CollabAgent(agent=agent2, description='Second', agent_handoffs=('Third',)),
@@ -541,36 +459,25 @@ async def test_agent_with_both_tools_and_handoffs():
     model1 = TestModel(
         call_tools=[],  # Removed 'helper_tool' due to project bug on line 258
         custom_output_args=HandOffBase(
-            next_agent='Agent2',
-            reasoning='Tool used, passing on',
-            query='processed with tools'
-        )
+            next_agent='Agent2', reasoning='Tool used, passing on', query='processed with tools'
+        ),
     )
-    model2 = TestModel(
-        call_tools=[],
-        custom_output_text='complete'
-    )
-    
+    model2 = TestModel(call_tools=[], custom_output_text='complete')
+
     async def helper_tool(task: str) -> str:
         return f'PROCESSED[{task}]'
-    
+
     Tool(helper_tool, takes_ctx=False)
-    
+
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
             CollabAgent(
-                agent=agent1,
-                description='Uses tools and handoffs',
-                agent_calls=(),
-                agent_handoffs=('Agent2',)
+                agent=agent1, description='Uses tools and handoffs', agent_calls=(), agent_handoffs=('Agent2',)
             ),
-            CollabAgent(
-                agent=agent2,
-                description='Final processor'
-            ),
+            CollabAgent(agent=agent2, description='Final processor'),
         ],
         starting_agent=agent1,
         max_handoffs=5,
@@ -586,12 +493,12 @@ async def test_agent_with_both_tools_and_handoffs():
 async def test_multiple_agents_with_shared_tools():
     """Test multiple agents sharing the same tool."""
     model = TestModel(call_tools=[])  # Removed 'shared_tool' due to project bug on line 258
-    
+
     async def shared_tool(input: str) -> str:
         return f'SHARED[{input}]'
-    
+
     Tool(shared_tool, takes_ctx=False)
-    
+
     agent1 = make_test_agent('Agent1', model)
     agent2 = make_test_agent('Agent2', model)
     agent3 = make_test_agent('Agent3', model)

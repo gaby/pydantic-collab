@@ -1,5 +1,4 @@
-"""
-Example 1: Simple Forward Chain
+"""Example 1: Simple Forward Chain
 ===============================
 
 Topology: Intake → Analyst → Reporter
@@ -15,22 +14,21 @@ import asyncio
 import logfire
 from pydantic_ai import Agent
 
-from pydantic_collab import Collab, CollabAgent, ForwardHandoffCollab
+from pydantic_collab import CollabAgent, PiplineCollab
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
 logfire.instrument_httpx(capture_all=True)
 
 # Use real model - requires GEMINI_API_KEY or GOOGLE_API_KEY in .env
-MODEL = "google-gla:gemini-2.0-flash"
+MODEL = 'google-gla:gemini-2.0-flash'
 
 
 def create_swarm():
     """Create the swarm with simple forward chain topology."""
-
     intake = Agent(
         MODEL,
-        name="Intake",
+        name='Intake',
         system_prompt="""You are an intake agent. Your job is to:
 1. Understand the user's request
 2. Summarize it clearly
@@ -39,7 +37,7 @@ def create_swarm():
 
     analyst = Agent(
         MODEL,
-        name="Analyst",
+        name='Analyst',
         system_prompt="""You are an analyst agent. Your job is to:
 1. Receive summarized requests from Intake
 2. Analyze and add insights
@@ -48,7 +46,7 @@ def create_swarm():
 
     reporter = Agent(
         MODEL,
-        name="Reporter",
+        name='Reporter',
         system_prompt="""You are a reporter agent. Your job is to:
 1. Receive analysis from Analyst
 2. Format a clear, user-friendly response
@@ -56,11 +54,11 @@ def create_swarm():
     )
 
     # Using forward_handoff: Intake → Analyst → Reporter
-    swarm = ForwardHandoffCollab(
+    swarm = PiplineCollab(
         agents=[
-            CollabAgent(agent=intake, description="Intake agent - understands user requests", agent_calls=()),
-            CollabAgent(agent=analyst, description="Analyst - analyzes and adds insights", agent_calls=()),
-            CollabAgent(agent=reporter, description="Reporter - formats final response", agent_calls=()),
+            CollabAgent(agent=intake, description='Intake agent - understands user requests', agent_calls=()),
+            CollabAgent(agent=analyst, description='Analyst - analyzes and adds insights', agent_calls=()),
+            CollabAgent(agent=reporter, description='Reporter - formats final response', agent_calls=()),
         ],
         max_handoffs=5,
     )
@@ -72,25 +70,25 @@ async def main():
     """Run the example."""
     swarm = create_swarm()
 
-    print("=== Simple Chain Example ===")
-    print("Topology: Intake → Analyst → Reporter")
+    print('=== Simple Chain Example ===')
+    print('Topology: Intake → Analyst → Reporter')
     print()
 
     # Test query
-    query = "I need help planning a birthday party for my daughter"
-    print(f"Query: {query}")
+    query = 'I need help planning a birthday party for my daughter'
+    print(f'Query: {query}')
     print()
 
     result = await swarm.run(query)
 
-    print("=== Result ===")
-    print(f"Response: {result.output}")
-    print(f"Final agent: {result.final_agent}")
-    print(f"Iterations: {result.iterations}")
-    print(f"Path: {' → '.join(result.execution_path)}")
+    print('=== Result ===')
+    print(f'Response: {result.output}')
+    print(f'Final agent: {result.final_agent}')
+    print(f'Iterations: {result.iterations}')
+    print(f'Path: {" → ".join(result.execution_path)}')
     print()
     print(result.print_execution_flow())
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())
