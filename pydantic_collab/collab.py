@@ -176,7 +176,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
         Args:
             agents: A list of agents with calls and handoffs specified. Agents that don't have calls can be specified
-                as (pydantic_ai.Agent, <description>), Agent that doesn't need description can be specified pydantic_ai.Agent
+                as (pydantic_ai.Agentx, <description>), Agent that doesn't need description can be specified pydantic_ai.Agent
             starting_agent: Agent that will produce final output; defaults to starting_agent if not set, unless a custom
                 agent Collab is used
             final_agent: Agent that will produce final output; defaults to starting_agent if not set, unless a custom
@@ -214,6 +214,17 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         tmp_agents: list[CollabAgent] = []
         for agent in agents:
             tmp_agents.append(self._normalize_agent(agent, True))
+
+        # Here we collect also agents that are listed by agent calls but aren't listed in another way
+        c = 0
+        agent_names = set(i.name for i in tmp_agents)
+        while c < len(tmp_agents):
+            for agent in (*tmp_agents[c].agent_calls, *tmp_agents[c].agent_handoffs):
+                if isinstance(agent, CollabAgent) and agent.name not in agent_names:
+                    tmp_agents.append(agent)
+                    agent_names.add(agent.name)
+            c += 1
+
         self._agents = tuple(tmp_agents)
         self._name_to_agent = {agent.name: agent for agent in self._agents}
 
@@ -271,13 +282,11 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
         if not handoff_agents:
             raise ValueError('No handoff agents specified, nothing to do with handoff model...')
-        # Build a runtime-enforced field that accepts any of the provided agent names
-        # We can't use a variable inside a Literal[] in typing expressions at runtime,
-        # so keep the annotation generic and rely on pydantic Field validation.
-        names = tuple[str, ...](ho.name for ho in handoff_agents)
 
         class ExplicitHandoffModel(self._handoff_model):
-            next_agent: str = Field(description='Name of the agent to route to', examples=list(names))
+            next_agent: Literal[tuple(ho.name for ho in handoff_agents)] = Field(
+                description='The next agent to hand off to'
+            )
 
         return ExplicitHandoffModel
 
