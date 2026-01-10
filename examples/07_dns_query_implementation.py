@@ -21,7 +21,7 @@ from example_tools import (
 )
 from pydantic_ai import Agent, WebFetchTool, WebSearchTool
 
-from pydantic_collab import Collab, CollabAgent, PiplineCollab
+from pydantic_collab import Collab, CollabAgent, PipelineCollab
 
 logfire.configure()
 logfire.instrument_httpx(capture_all=True)
@@ -263,7 +263,7 @@ async def simple_chain_example():
     reviewer_simple.tool(run_python_code)
 
     # Create linear chain swarm
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=researcher_simple, description='Research DNS implementation'),
             CollabAgent(agent=code_writer_simple, description='Write the code'),

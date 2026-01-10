@@ -81,7 +81,7 @@ class MeshCollab(Collab[AgentDepsT, OutputDataT]):
         self.final_agent = self.starting_agent
 
 
-class PiplineCollab(Collab[AgentDepsT, OutputDataT]):
+class PipelineCollab(Collab[AgentDepsT, OutputDataT]):
     """Pipeline Collab - agents[0] hands off to agent[1] hands off to agents[2].
 
     Agents can and should hand off to the next agent, according to the order of them supplied to ´agents´.
@@ -95,9 +95,9 @@ class PiplineCollab(Collab[AgentDepsT, OutputDataT]):
         elif self.final_agent not in self._agents:
             self._agents = (*self._agents, self.final_agent)
         elif self.final_agent != self._agents[-1]:
-            raise CollabError('Final agent must be last agent when using PiplineCollab')
+            raise CollabError('Final agent must be last agent when using PipelineCollab')
         if self._agents.index(self.starting_agent) != 0:
-            raise CollabError('When using PiplineCollab, starting agent must be first or not present in agents')
+            raise CollabError('When using PipelineCollab, starting agent must be first or not present in agents')
         for ag_num in range(len(self._agents) - 1):
             self._handoffs[self._agents[ag_num]] = (self._agents[ag_num + 1],)
 

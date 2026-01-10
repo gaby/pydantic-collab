@@ -10,7 +10,7 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from pydantic_collab import Collab, CollabAgent
 from pydantic_collab._types import HandOffBase
-from pydantic_collab.custom_collabs import PiplineCollab, StarCollab
+from pydantic_collab.custom_collabs import PipelineCollab, StarCollab
 
 
 @pytest.fixture
@@ -225,7 +225,7 @@ class TestDecoratorIntegration:
         agent_a = Agent(model_a, name='AgentA')
         agent_b = Agent(model_b, name='AgentB')
 
-        collab = PiplineCollab(
+        collab = PipelineCollab(
             agents=[(agent_a, 'First'), (agent_b, 'Second')], max_handoffs=5
         )
 

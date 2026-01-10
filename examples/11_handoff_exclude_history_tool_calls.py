@@ -10,7 +10,7 @@ import logfire
 from example_tools import search_tool
 from pydantic_ai import Agent
 
-from pydantic_collab import CollabAgent, PiplineCollab
+from pydantic_collab import CollabAgent, PipelineCollab
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
@@ -40,7 +40,7 @@ def create_swarm():
     )
     back = Agent(MODEL, name='Back', system_prompt='You are a backend analyst, only needs tool traces.')
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             # Do not register agent_calls — we want Front to call the builtin function tool only.
             CollabAgent(agent=front, description='Front'),

@@ -12,7 +12,7 @@ from .collab import (
     Collab,
     CollabState,
 )
-from .custom_collabs import MeshCollab, PiplineCollab, StarCollab
+from .custom_collabs import MeshCollab, PipelineCollab, StarCollab
 
 __all__ = [
     # Core
@@ -20,7 +20,7 @@ __all__ = [
     'Collab',
     'CollabState',
     # Custom Collabs
-    'PiplineCollab',
+    'PipelineCollab',
     'MeshCollab',
     'StarCollab',
     # Prompt/Context builders

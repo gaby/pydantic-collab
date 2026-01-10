@@ -7,7 +7,7 @@ is passed during handoffs and how context is managed.
 import pytest
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import CollabAgent, PiplineCollab
+from pydantic_collab import CollabAgent, PipelineCollab
 from pydantic_collab._types import HandOffBase
 from tests.test_handoff_tool_control import make_test_agent
 
@@ -28,7 +28,7 @@ async def test_handoff_data_payload_structure():
     processor = make_test_agent('Processor', model1)
     analyzer = make_test_agent('Analyzer', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=processor, description='Processes data', agent_handoffs=('Analyzer',)),
             CollabAgent(agent=analyzer, description='Analyzes results'),
@@ -70,7 +70,7 @@ async def test_handoff_query_transformation():
     processor = make_test_agent('Processor', model1)
     formatter = make_test_agent('Formatter', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=processor, description='Processes data', agent_handoffs=('Formatter',)),
             CollabAgent(agent=formatter, description='Formats output'),
@@ -107,7 +107,7 @@ async def test_handoff_reasoning_preserved():
     generalist = make_test_agent('Generalist', model1)
     specialist = make_test_agent('Specialist', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=generalist, description='General processor', agent_handoffs=('Specialist',)),
             CollabAgent(agent=specialist, description='Specialist analyzer'),
@@ -149,7 +149,7 @@ async def test_multi_step_data_flow():
     processor = make_test_agent('Processor', model2)
     analyzer = make_test_agent('Analyzer', model3)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=collector, description='Collects data', agent_handoffs=('Processor',)),
             CollabAgent(agent=processor, description='Processes data', agent_handoffs=('Analyzer',)),
@@ -193,8 +193,8 @@ async def test_conditional_handoff_verification():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Target2', model2)
 
-    # In PiplineCollab, agents are chained in order
-    swarm = PiplineCollab(
+    # In PipelineCollab, agents are chained in order
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='First', agent_handoffs=('Target2',)),
             CollabAgent(agent=agent2, description='Second'),
@@ -227,7 +227,7 @@ async def test_handoff_with_empty_reasoning():
     first = make_test_agent('First', model1)
     second = make_test_agent('Next', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=first, description='First agent', agent_handoffs=('Next',)),
             CollabAgent(agent=second, description='Next agent'),
@@ -257,7 +257,7 @@ async def test_handoff_preserves_execution_path():
     c = make_test_agent('C', model3)
     d = make_test_agent('D', model4)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=a, description='A', agent_handoffs=('B',)),
             CollabAgent(agent=b, description='B', agent_handoffs=('C',)),
@@ -288,7 +288,7 @@ async def test_handoff_usage_tracking():
     first = make_test_agent('First', model1)
     second = make_test_agent('Second', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=first, description='First', agent_handoffs=('Second',)),
             CollabAgent(agent=second, description='Second'),
@@ -320,7 +320,7 @@ async def test_handoff_data_isolation():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -360,7 +360,7 @@ async def test_long_handoff_chain_data_integrity():
         handoffs = (f'Agent{i + 2}',) if i < 4 else ()
         agents_list.append(CollabAgent(agent=agent, description=f'Agent {i + 1}', agent_handoffs=handoffs))
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=agents_list,
         starting_agent=agents_list[0].agent,
         max_handoffs=10,

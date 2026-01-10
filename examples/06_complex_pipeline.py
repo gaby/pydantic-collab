@@ -14,7 +14,7 @@ import asyncio
 import logfire
 from pydantic_ai import Agent
 
-from pydantic_collab import CollabAgent, PiplineCollab
+from pydantic_collab import CollabAgent, PipelineCollab
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
@@ -66,7 +66,7 @@ def create_swarm():
     )
 
     # Forward handoff chain: Intake → Researcher → Writer → Publisher
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=intake, description='Intake - receives and clarifies content requests'),
             CollabAgent(agent=researcher, description='Researcher - gathers facts and background'),

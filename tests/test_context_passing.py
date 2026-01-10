@@ -10,7 +10,7 @@ from pydantic_ai.models.test import TestModel
 from pydantic_collab import (
     CollabAgent,
     CollabSettings,
-    PiplineCollab,
+    PipelineCollab,
 )
 from pydantic_collab._types import HandOffBase
 from tests.test_handoff_tool_control import make_test_agent
@@ -39,7 +39,7 @@ async def test_handoff_excludes_conversation_history():
         include_thinking='disallow',
     )
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -79,7 +79,7 @@ async def test_handoff_includes_conversation_history():
         include_thinking='disallow',
     )
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -116,7 +116,7 @@ async def test_network_settings_default_behavior():
         include_thinking='disallow',
     )
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -157,7 +157,7 @@ async def test_multiple_handoffs_with_varying_context():
     agent2 = make_test_agent('Agent2', model2)
     agent3 = make_test_agent('Agent3', model3)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='A1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='A2', agent_handoffs=('Agent3',)),
@@ -194,7 +194,7 @@ async def test_handoff_query_size_control():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -230,7 +230,7 @@ async def test_handoff_with_structured_query_data():
     processor = make_test_agent('Processor', model1)
     analyzer = make_test_agent('Analyzer', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=processor, description='Processor', agent_handoffs=('Analyzer',)),
             CollabAgent(agent=analyzer, description='Analyzer'),
@@ -273,7 +273,7 @@ async def test_handoff_context_aggregation_in_chain():
     agent2 = make_test_agent('Agent2', model2)
     agent3 = make_test_agent('Agent3', model3)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='A1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='A2', agent_handoffs=('Agent3',)),
@@ -312,7 +312,7 @@ async def test_empty_handoff_query():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -345,7 +345,7 @@ async def test_handoff_preserves_metadata():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='First agent description', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Second agent description'),
@@ -381,7 +381,7 @@ async def test_handoff_data_sanitization():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),
@@ -414,7 +414,7 @@ async def test_bidirectional_handoff_limit():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Agent 1', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Agent 2'),

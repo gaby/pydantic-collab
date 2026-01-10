@@ -1,6 +1,6 @@
 """Unit tests for pydantic_collab.custom_collabs module.
 
-Tests the specialized Collab classes: StarCollab, MeshCollab, PiplineCollab, HierarchyCollab.
+Tests the specialized Collab classes: StarCollab, MeshCollab, PipelineCollab, HierarchyCollab.
 """
 
 import pytest
@@ -11,7 +11,7 @@ from pydantic_collab import CollabAgent, CollabError
 from pydantic_collab.custom_collabs import (
     HierarchyCollab,
     MeshCollab,
-    PiplineCollab,
+    PipelineCollab,
     StarCollab,
 )
 
@@ -160,8 +160,8 @@ class TestMeshCollab:
         assert 'AgentB' not in collab.connections.get('AgentB', ())
 
 
-class TestPiplineCollab:
-    """Tests for PiplineCollab (forward handoff chain)."""
+class TestPipelineCollab:
+    """Tests for PipelineCollab (forward handoff chain)."""
 
     def test_basic_chain(self, agent_a, agent_b, agent_c):
         """Pipeline should create A→B→C handoff chain."""
@@ -170,7 +170,7 @@ class TestPiplineCollab:
             (agent_b, 'Middle'),
             (agent_c, 'Last'),
         ]
-        collab = PiplineCollab(agents=agents)
+        collab = PipelineCollab(agents=agents)
 
         assert collab.starting_agent.name == 'AgentA'
         assert collab.final_agent.name == 'AgentC'
@@ -182,7 +182,7 @@ class TestPiplineCollab:
             (agent_b, 'Middle'),
             (agent_c, 'Last'),
         ]
-        collab = PiplineCollab(agents=agents)
+        collab = PipelineCollab(agents=agents)
 
         handoffs = collab.handoffs
         assert 'AgentB' in handoffs.get('AgentA', ())
@@ -193,7 +193,7 @@ class TestPiplineCollab:
     def test_two_agent_pipeline(self, agent_a, agent_b):
         """Pipeline works with just two agents."""
         agents = [(agent_a, 'Start'), (agent_b, 'End')]
-        collab = PiplineCollab(agents=agents)
+        collab = PipelineCollab(agents=agents)
 
         assert collab.starting_agent.name == 'AgentA'
         assert collab.final_agent.name == 'AgentB'
@@ -202,7 +202,7 @@ class TestPiplineCollab:
     def test_single_agent_pipeline(self, agent_a):
         """Single agent pipeline - start is also final."""
         agents = [(agent_a, 'Only')]
-        collab = PiplineCollab(agents=agents)
+        collab = PipelineCollab(agents=agents)
 
         assert collab.starting_agent.name == 'AgentA'
         assert collab.final_agent.name == 'AgentA'
@@ -218,7 +218,7 @@ class TestPiplineCollab:
         collab_agent_b = CollabAgent(agent=agent_b, description='Middle')
 
         with pytest.raises(CollabError, match='Final agent must be last'):
-            PiplineCollab(agents=agents, final_agent=collab_agent_b)
+            PipelineCollab(agents=agents, final_agent=collab_agent_b)
 
     def test_starting_agent_must_be_first(self, agent_a, agent_b, agent_c):
         """Starting agent must be first in the sequence."""
@@ -231,12 +231,12 @@ class TestPiplineCollab:
         collab_agent_b = CollabAgent(agent=agent_b, description='Middle')
 
         with pytest.raises(CollabError, match='starting agent must be first'):
-            PiplineCollab(agents=agents, starting_agent=collab_agent_b)
+            PipelineCollab(agents=agents, starting_agent=collab_agent_b)
 
     def test_has_handoffs(self, agent_a, agent_b):
         """Pipeline should have handoffs between consecutive agents."""
         agents = [(agent_a, 'Start'), (agent_b, 'End')]
-        collab = PiplineCollab(agents=agents)
+        collab = PipelineCollab(agents=agents)
 
         assert collab.has_handoffs
 
@@ -332,7 +332,7 @@ class TestCollabIntegration:
 
     @pytest.mark.asyncio
     async def test_pipeline_collab_run(self, test_model):
-        """PiplineCollab should hand off through the chain."""
+        """PipelineCollab should hand off through the chain."""
         from pydantic_collab._types import HandOffBase
 
         # Create models that produce handoffs
@@ -344,7 +344,7 @@ class TestCollabIntegration:
         agent_a = Agent(model_a, name='AgentA')
         agent_b = Agent(model_b, name='AgentB')
 
-        collab = PiplineCollab(
+        collab = PipelineCollab(
             agents=[(agent_a, 'First stage'), (agent_b, 'Final stage')],
             max_handoffs=5,
         )
@@ -387,12 +387,12 @@ class TestCollabWithCollabAgents:
         assert 'AgentB' in collab.connections.get('AgentA', ())
 
     def test_pipeline_with_collab_agents(self, agent_a, agent_b, agent_c):
-        """PiplineCollab works with CollabAgent instances."""
+        """PipelineCollab works with CollabAgent instances."""
         collab_a = CollabAgent(agent=agent_a, description='First')
         collab_b = CollabAgent(agent=agent_b, description='Middle')
         collab_c = CollabAgent(agent=agent_c, description='Last')
 
-        collab = PiplineCollab(agents=[collab_a, collab_b, collab_c])
+        collab = PipelineCollab(agents=[collab_a, collab_b, collab_c])
 
         assert collab.starting_agent == collab_a
         assert collab.final_agent == collab_c
@@ -402,7 +402,7 @@ class TestCollabWithCollabAgents:
         """Can mix CollabAgent and tuple formats."""
         collab_a = CollabAgent(agent=agent_a, description='CollabAgent style')
 
-        collab = PiplineCollab(
+        collab = PipelineCollab(
             agents=[collab_a, (agent_b, 'Tuple style'), (agent_c, 'Also tuple')]
         )
 

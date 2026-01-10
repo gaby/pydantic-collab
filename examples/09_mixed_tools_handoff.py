@@ -9,7 +9,7 @@ import logfire
 from example_tools import summarize_tool
 from pydantic_ai import Agent
 
-from pydantic_collab import CollabAgent, PiplineCollab
+from pydantic_collab import CollabAgent, PipelineCollab
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
@@ -37,7 +37,7 @@ def create_swarm():
         system_prompt='You format and return final content.',
     )
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=gatherer, description='Gatherer'),
             CollabAgent(agent=editor, description='Editor', agent_calls='Gatherer'),

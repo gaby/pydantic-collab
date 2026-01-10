@@ -9,7 +9,7 @@ import asyncio
 import logfire
 from pydantic_ai import Agent
 
-from pydantic_collab import CollabAgent, PiplineCollab
+from pydantic_collab import CollabAgent, PipelineCollab
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
@@ -38,7 +38,7 @@ If handing off, use HandoffOutput with next_agent set to 'Expert' or 'Support'."
         system_prompt="""You are a support agent. Provide actionable steps or ask for more info.""",
     )
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=intake, description='Intake agent', agent_calls=('Expert', 'Support')),
             CollabAgent(agent=expert, description='Expert agent'),

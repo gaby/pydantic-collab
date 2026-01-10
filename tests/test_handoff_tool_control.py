@@ -2,7 +2,7 @@ import pytest
 from pydantic_ai import Agent, Tool
 from pydantic_ai.models.test import TestModel
 
-from pydantic_collab import Collab, CollabAgent, MeshCollab, PiplineCollab, StarCollab
+from pydantic_collab import Collab, CollabAgent, MeshCollab, PipelineCollab, StarCollab
 from pydantic_collab._types import HandOffBase
 
 
@@ -186,7 +186,7 @@ async def test_handoff_basic():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='First', agent_handoffs=('Agent2',)),
             CollabAgent(agent=agent2, description='Second'),
@@ -217,7 +217,7 @@ async def test_handoff_with_include_conversation():
     starter = make_test_agent('Starter', model1)
     finisher = make_test_agent('Finisher', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=starter, description='Starts task', agent_handoffs=('Finisher',)),
             CollabAgent(agent=finisher, description='Finishes task'),
@@ -250,7 +250,7 @@ async def test_handoff_without_conversation():
     processor = make_test_agent('Processor', model1)
     analyzer = make_test_agent('Analyzer', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=processor, description='Processes data', agent_handoffs=('Analyzer',)),
             CollabAgent(agent=analyzer, description='Analyzes results'),
@@ -282,7 +282,7 @@ async def test_handoff_chain_three_agents():
     second = make_test_agent('Second', model2)
     third = make_test_agent('Third', model3)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=first, description='Step 1', agent_handoffs=('Second',)),
             CollabAgent(agent=second, description='Step 2', agent_handoffs=('Third',)),
@@ -369,7 +369,7 @@ async def test_forward_handoff_topology():
     agent2 = make_test_agent('Second', model2)
     agent3 = make_test_agent('Third', model3)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='Step 1', agent_handoffs=('Second',)),
             CollabAgent(agent=agent2, description='Step 2', agent_handoffs=('Third',)),
@@ -406,7 +406,7 @@ async def test_max_iterations_limit():
     agent3 = make_test_agent('Third', model3)
 
     # Create a 3-agent chain but limit to 2 iterations
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(agent=agent1, description='First', agent_handoffs=('Second',)),
             CollabAgent(agent=agent2, description='Second', agent_handoffs=('Third',)),
@@ -472,7 +472,7 @@ async def test_agent_with_both_tools_and_handoffs():
     agent1 = make_test_agent('Agent1', model1)
     agent2 = make_test_agent('Agent2', model2)
 
-    swarm = PiplineCollab(
+    swarm = PipelineCollab(
         agents=[
             CollabAgent(
                 agent=agent1, description='Uses tools and handoffs', agent_calls=(), agent_handoffs=('Agent2',)

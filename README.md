@@ -15,13 +15,13 @@ Define agent topologies through custom or pre-build topologies. Agents communica
 ```python
 from pydantic_ai import Agent
 from pydantic_ai.builtin_tools import WebSearchTool
-from pydantic_collab import PiplineCollab
+from pydantic_collab import PipelineCollab
 
 intake = Agent(name="Intake", system_prompt="Summarize requests and relevant data from the internet",
                builtin_tools=[WebSearchTool()])
 reporter = Agent(name="Reporter", system_prompt="Create final response")
 
-swarm = PiplineCollab(
+swarm = PipelineCollab(
     agents=[(intake, "Intake agent"), (reporter, "Reporter agent")],
     model="openai:gpt-5.2"
 )
@@ -59,9 +59,9 @@ Use when an agent's part is done and control should transfer:
 
 ```python
 from pydantic_ai import Agent
-from pydantic_collab import PiplineCollab
+from pydantic_collab import PipelineCollab
 
-swarm = PiplineCollab(
+swarm = PipelineCollab(
     agents=[
         (Agent(name="Intake", system_prompt="Summarize and hand off"), "Intake"),
         (Agent(name="Analyst", system_prompt="Analyze and hand off"), "Analyst"),
@@ -218,7 +218,7 @@ swarm = Collab(
 ### Handoff Settings
 
 Control what information flows between agents during handoffs.
-Most options allow 3 options 
+Most settings accept three values: 
 - *allow* - Agent decides every handoff
 - *disallow" - Always false, agent has no say
 - *allow* - Always true, agent has not say.
@@ -278,9 +278,9 @@ swarm = Collab(
 ```
 
 ### Using Dependencies
-TODO
 ```python
 from pydantic import BaseModel
+from pydantic_collab import Collab
 
 class MyDeps(BaseModel):
     db: Database
@@ -288,8 +288,8 @@ class MyDeps(BaseModel):
 
 swarm = Collab(
     agents=[...],
-    deps=MyDeps(db=db, cache=cache),
 )
+result = swarm.run_sync("...", deps=MyDeps(db=db, cache=cache))
 ```
 
 ## Examples
