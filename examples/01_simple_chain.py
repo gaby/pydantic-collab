@@ -56,9 +56,9 @@ def create_swarm():
     # Using forward_handoff: Intake → Analyst → Reporter
     swarm = PiplineCollab(
         agents=[
-            CollabAgent(agent=intake, description='Intake agent - understands user requests', agent_calls=()),
-            CollabAgent(agent=analyst, description='Analyst - analyzes and adds insights', agent_calls=()),
-            CollabAgent(agent=reporter, description='Reporter - formats final response', agent_calls=()),
+            CollabAgent(agent=intake, description='Intake agent - understands user requests'),
+            CollabAgent(agent=analyst, description='Analyst - analyzes and adds insights'),
+            CollabAgent(agent=reporter, description='Reporter - formats final response'),
         ],
         max_handoffs=5,
     )

@@ -45,7 +45,6 @@ from pydantic_ai.tools import (
     ToolParams,
     ToolPrepareFunc,
 )
-from pydantic_ai.toolsets._dynamic import DynamicToolset
 
 # SystemPromptFunc not used directly here; avoid unused import
 from ._types import (
@@ -60,9 +59,11 @@ from ._types import (
     HandoffData,
     OutputDataT,
     PromptBuilderContext,
+    ensure_tuple,
     get_right_handoff_model,
     t_agent_desc,
     t_agent_name,
+    t_seq_or_one,
 )
 from ._utils import default_build_agent_prompt, get_context
 
@@ -154,14 +155,14 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
 
     def __init__(
         self,
-        agents: Sequence[CollabAgent | tuple[AbstractAgent, str | None]],
+        agents: t_seq_or_one[CollabAgent | tuple[AbstractAgent, str | None]],
         starting_agent: CollabAgent | AbstractAgent | tuple[AbstractAgent, str | None] | None = None,
         final_agent: CollabAgent | str | None = None,
         name: str | None = None,
         max_handoffs: int = 10,
         output_type: OutputDataT | None = None,
-        tools: Sequence[Tool | ToolFuncEither[AgentDepsT, ...]] | None = None,
-        toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
+        tools: t_seq_or_one[Tool | ToolFuncEither[AgentDepsT, ...]] | None = None,
+        toolsets: t_seq_or_one[AbstractToolset[AgentDepsT]] | None = None,
         model: Model | KnownModelName | str | None = None,
         model_settings: ModelSettings | None = None,
         collab_settings: CollabSettings | None = None,
@@ -212,7 +213,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         # Call post-init logic
 
         tmp_agents: list[CollabAgent] = []
-        for agent in agents:
+        for agent in ensure_tuple(agents):
             tmp_agents.append(self._normalize_agent(agent, True))
 
         # Here we collect also agents that are listed by agent calls but aren't listed in another way
@@ -243,10 +244,10 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             self._instructions = []
 
         if tools:
-            self._user_toolset = FunctionToolset(tuple(tools))
+            self._user_toolset = FunctionToolset(ensure_tuple(tools))
         else:
             self._user_toolset = FunctionToolset()
-        self._toolsets = (self._user_toolset, *(toolsets or ()))
+        self._toolsets = (self._user_toolset, *(ensure_tuple(toolsets) or ()))
 
         # Initialize public fields
         self.name = name
@@ -1319,6 +1320,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             func: The toolset function to register.
             per_run_step: Whether to re-evaluate the toolset for each run step. Defaults to True.
         """
+        from pydantic_ai.toolsets._dynamic import DynamicToolset
 
         def toolset_decorator(func_: ToolsetFunc[AgentDepsT]) -> ToolsetFunc[AgentDepsT]:
             self._dynamic_toolsets.append(DynamicToolset(func_, per_run_step=per_run_step))

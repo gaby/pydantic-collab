@@ -43,11 +43,11 @@ def create_swarm():
     swarm = PiplineCollab(
         agents=[
             # Do not register agent_calls — we want Front to call the builtin function tool only.
-            CollabAgent(agent=front, description='Front', agent_calls=()),
-            CollabAgent(agent=back, description='Back', agent_calls=()),
+            CollabAgent(agent=front, description='Front'),
+            CollabAgent(agent=back, description='Back'),
         ],
         max_handoffs=3,
-        tools=(search_tool,),
+        tools=search_tool,
     )
     return swarm
 

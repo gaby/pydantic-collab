@@ -116,8 +116,8 @@ swarm = Collab(
         CollabAgent(
             agent=Agent(name="Router", system_prompt="Route requests"),
             description="Routes requests",
-            agent_calls=("Researcher",),  # Can call as tool
-            agent_handoffs=("Writer",),  # Can transfer control
+            agent_calls="Researcher",  # Can call as tool
+            agent_handoffs="Writer",  # Can transfer control
         ),
         CollabAgent(
             agent=Agent(name="Researcher", system_prompt="Research topics"),
@@ -126,7 +126,7 @@ swarm = Collab(
         CollabAgent(
             agent=Agent(name="Writer", system_prompt="Write content"),
             description="Writes content",
-            agent_handoffs=("Editor",),
+            agent_handoffs="Editor",
         ),
         CollabAgent(
             agent=Agent(name="Editor", system_prompt="Final editing"),

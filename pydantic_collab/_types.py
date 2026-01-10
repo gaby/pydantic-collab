@@ -7,7 +7,7 @@ used internally by the Collab orchestrator. Users should not import from this mo
 from __future__ import annotations
 
 import copy
-from collections.abc import Callable, Collection, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, ClassVar, Generic, Literal, TypeAlias, TypeVar, cast
@@ -15,6 +15,33 @@ from typing import Any, ClassVar, Generic, Literal, TypeAlias, TypeVar, cast
 from pydantic import BaseModel, Field
 from pydantic_ai import RunUsage
 from pydantic_ai.agent import AbstractAgent
+from typing_extensions import TypeAliasType
+
+T = TypeVar('T')
+# =============================================================================
+# Utility Functions (defined here to avoid circular imports)
+# =============================================================================
+
+
+# For some reason tuple[Unpack[T]]  doesn't work in ruff
+def ensure_tuple(value: T) -> tuple[T] | T | None:
+    """Convert a value to a tuple, handling various input types.
+
+    Args:
+        value: Value to convert - can be None, tuple, list, set, frozenset, or single item
+
+    Returns:
+        None if value is None, the original tuple if already a tuple,
+        a tuple of the items if a collection, or a single-item tuple for other values
+    """
+    if value is None:
+        return None
+    if isinstance(value, tuple):
+        return value
+    elif isinstance(value, (list, set, frozenset)):
+        return tuple(value)
+    return (value,)
+
 
 # =============================================================================
 # Type Aliases
@@ -26,7 +53,7 @@ AgentDepsT = TypeVar('AgentDepsT')
 OutputDataT = TypeVar('OutputDataT')
 # Can be an agent name, an AbstractAgent instance, or a CollabAgent wrapper
 t_agent_desc: TypeAlias = 'str | AbstractAgent | CollabAgent'
-
+t_seq_or_one = TypeAliasType('t_seq_or_one', T | Sequence[T], type_params=(T,))
 
 # =============================================================================
 # Exceptions
@@ -217,8 +244,8 @@ class CollabAgent:
         self,
         agent: AbstractAgent,
         description: str | None,
-        agent_calls: Sequence[t_agent_desc] = (),
-        agent_handoffs: Sequence[t_agent_desc] = (),
+        agent_calls: t_agent_desc | Sequence[t_agent_desc] = (),
+        agent_handoffs: t_agent_desc | Sequence[t_agent_desc] = (),
         name: str | None = None,
     ) -> None:
         """Initialize a CollabAgent.
@@ -233,8 +260,8 @@ class CollabAgent:
         """
         object.__setattr__(self, 'agent', agent)
         object.__setattr__(self, 'description', description)
-        object.__setattr__(self, 'agent_calls', agent_calls)
-        object.__setattr__(self, 'agent_handoffs', agent_handoffs)
+        object.__setattr__(self, 'agent_calls', ensure_tuple(agent_calls))
+        object.__setattr__(self, 'agent_handoffs', ensure_tuple(agent_handoffs))
         if name is None and agent.name is None:
             raise ValueError('Agent must have a name to participate in Collab')
         if name is None:
@@ -302,8 +329,8 @@ class PromptBuilderContext:
     agent: CollabAgent
     final_agent: bool
     can_handoff: bool
-    handoff_agents: Collection[CollabAgent]
-    tool_agents: Collection[CollabAgent]
+    handoff_agents: Sequence[CollabAgent]
+    tool_agents: Sequence[CollabAgent]
     called_as_tool: bool
     ascii_topology: str | None = None
     can_do_parallel_agent_calls: bool = True

@@ -139,23 +139,23 @@ async def main():
             CollabAgent(
                 agent=orchestrator,
                 description='Coordinates the workflow and makes decisions',
-                agent_handoffs=('Researcher',),
-                agent_calls=('Researcher',),
+                agent_handoffs='Researcher',
+                agent_calls='Researcher',
             ),
             CollabAgent(
                 agent=researcher,
                 description='Researches DNS query implementation in Python',
-                agent_handoffs=('CodeWriter',),
+                agent_handoffs='CodeWriter',
             ),
             CollabAgent(
                 agent=code_writer,
                 description='Writes the DNS query implementation code',
-                agent_handoffs=('Reviewer',),
+                agent_handoffs='Reviewer',
             ),
             CollabAgent(
                 agent=reviewer,
                 description='Reviews, tests, and improves the code',
-                agent_calls=('CodeWriter',),
+                agent_calls='CodeWriter',
             ),
         ],
         final_agent='Reviewer',

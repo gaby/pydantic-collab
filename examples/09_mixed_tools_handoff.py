@@ -39,12 +39,12 @@ def create_swarm():
 
     swarm = PiplineCollab(
         agents=[
-            CollabAgent(agent=gatherer, description='Gatherer', agent_calls=()),
-            CollabAgent(agent=editor, description='Editor', agent_calls=('Gatherer',)),
-            CollabAgent(agent=publisher, description='Publisher', agent_calls=()),
+            CollabAgent(agent=gatherer, description='Gatherer'),
+            CollabAgent(agent=editor, description='Editor', agent_calls='Gatherer'),
+            CollabAgent(agent=publisher, description='Publisher'),
         ],
         max_handoffs=6,
-        tools=(summarize_tool,),
+        tools=summarize_tool,
     )
 
     return swarm

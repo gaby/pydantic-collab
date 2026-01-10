@@ -4,7 +4,9 @@ This module contains helper functions for building prompts, processing message
 history, and extracting tool calls. Users should not import from this module directly.
 """
 
-from typing import Any, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic_ai import (
     BaseToolCallPart,
@@ -16,18 +18,15 @@ from pydantic_ai import (
     UserPromptPart,
 )
 
-from ._types import HandoffData, PromptBuilderContext
+if TYPE_CHECKING:
+    from ._types import HandoffData, PromptBuilderContext
 
 # =============================================================================
 # Message History Utilities
 # =============================================================================
 
 
-PART_TO_STR: dict[Any, str] = {
-    UserPromptPart: 'User:',
-    SystemPromptPart: 'System:',
-    TextPart: ''
-}
+PART_TO_STR: dict[Any, str] = {UserPromptPart: 'User:', SystemPromptPart: 'System:', TextPart: ''}
 
 
 def message_history_to_text(
@@ -37,13 +36,13 @@ def message_history_to_text(
     include_instructions: bool = False,
 ) -> str:
     """Convert message history to human-readable text.
-    
+
     Args:
         mh: List of model requests and responses
         ignore_system: Whether to skip system prompt parts
         include_thinking: Whether to include thinking parts
         include_instructions: Whether to include instruction parts (pydantic_ai feature)
-        
+
     Returns:
         Formatted text representation of message history
     """
@@ -71,13 +70,13 @@ def message_history_to_text(
 
 def get_tool_calls(mh: list[Any], agent_name: str) -> str:
     """Extract tool calls to a specific agent from message history.
-    
+
     Finds all call_agent tool calls targeting the specified agent and their returns.
-    
+
     Args:
         mh: List of model requests and responses
         agent_name: Name of the agent to find calls for
-        
+
     Returns:
         Formatted text of tool calls and responses
     """
@@ -104,13 +103,13 @@ def get_tool_calls(mh: list[Any], agent_name: str) -> str:
 
 def get_context(handoff_data: HandoffData) -> str:
     """Build context string from handoff data.
-    
+
     Default context builder that assembles context from previous handoffs,
     message history, and tool calls.
-    
+
     Args:
         handoff_data: Data about the handoff including history and settings
-        
+
     Returns:
         Formatted context string to inject into next agent's instructions
     """
@@ -127,9 +126,7 @@ def get_context(handoff_data: HandoffData) -> str:
             )
         )
         if handoff_data.include_tool_calls_with_callee:
-            tc = get_tool_calls(
-                handoff_data.message_history, handoff_data.callee_agent_name
-            )
+            tc = get_tool_calls(handoff_data.message_history, handoff_data.callee_agent_name)
             if tc:
                 out.extend(['## Previous Tool Calls you had', tc])
     return '\n'.join(out)
@@ -140,16 +137,15 @@ def get_context(handoff_data: HandoffData) -> str:
 # =============================================================================
 
 
-
 def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
     """Build agent-specific instructions based on capabilities.
-    
+
     Default prompt builder that describes available actions (handoffs, tool calls,
     final output) based on the agent's position in the Collab topology.
-    
+
     Args:
         ctx: Context with agent capabilities and available targets
-        
+
     Returns:
         Formatted instructions string
     """
@@ -159,23 +155,23 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
     # Header explaining multi-agent capabilities
     has_handoffs = ctx.can_handoff and ctx.handoff_agents
     has_tool_agents = bool(ctx.tool_agents)
-    
+
     if has_handoffs or has_tool_agents:
-        output_instructions.extend(['## Tool Usage Best Practices', '', '⚠️ **CRITICAL GUIDELINES** for using tools efficiently:\n', ''])
+        output_instructions.extend(
+            ['## Tool Usage Best Practices', '', '⚠️ **CRITICAL GUIDELINES** for using tools efficiently:\n', '']
+        )
 
         output_instructions.append('## Multi-Agent Collaboration')
         output_instructions.append('')
-        
+
         if has_handoffs and has_tool_agents:
+            output_instructions.append('You have TWO DISTINCT ways to interact with other agents:\n')
             output_instructions.append(
-                'You have TWO DISTINCT ways to interact with other agents:\n'
-            )
-            output_instructions.append(
-                "### 1. HANDOFF (Transfer Control)\n"
-                "- **Purpose**: Permanently transfer control when your part is done\n"
+                '### 1. HANDOFF (Transfer Control)\n'
+                '- **Purpose**: Permanently transfer control when your part is done\n'
                 "- **Mechanism**: Use HandoffOutput with 'next_agent' field\n"
-                "- **Result**: The other agent takes over completely; you stop processing\n"
-                "- **Use when**: Another agent should handle the rest of the conversation\n"
+                '- **Result**: The other agent takes over completely; you stop processing\n'
+                '- **Use when**: Another agent should handle the rest of the conversation\n'
                 "- **⚠️ Important**: If control is handed back to you later, you won't have your previous conversation history\n"
             )
             output_instructions.append(
@@ -191,8 +187,8 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
             )
         elif has_handoffs:
             output_instructions.append(
-                "You can **HANDOFF** control to other agents. This permanently transfers control - "
-                "the receiving agent will continue from that point and you will stop processing.\n"
+                'You can **HANDOFF** control to other agents. This permanently transfers control - '
+                'the receiving agent will continue from that point and you will stop processing.\n'
                 "Use HandoffOutput with 'next_agent' to specify the target agent.\n\n"
                 "⚠️ **Important**: If control is handed back to you later, you won't have your previous conversation history.\n"
             )
@@ -202,19 +198,21 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
                 'Use the call_agent tool function to request help. '
                 'After they respond, you continue your work with their output.\n'
             )
-    
+
     # Handoff instructions
     if has_handoffs:
         agents_desc: list[str] = []
         for agent in ctx.handoff_agents:
             agents_desc.append(f'  • **{agent.name}**: {agent.description}')
-        
+
         output_instructions.append('---')
         output_instructions.append('## Handoff')
-        output_instructions.append(f'You are {ctx.agent.name}.') # We need this for the agent to understand where it
+        output_instructions.append(f'You are {ctx.agent.name}.')  # We need this for the agent to understand where it
         # Stands in relation to topology and other things
-        output_instructions.append('**Hand off promptly**: When your task is complete, hand off immediately.\n'
-                                    'Do not linger or double-check endlessly.\n')
+        output_instructions.append(
+            '**Hand off promptly**: When your task is complete, hand off immediately.\n'
+            'Do not linger or double-check endlessly.\n'
+        )
         output_instructions.append('### Agents You Can HANDOFF To')
         output_instructions.append(
             "These agents can take over complete control. Use HandoffOutput(next_agent='AgentName', query='...'):\n"
@@ -230,18 +228,22 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
         agents_desc: list[str] = []
         for agent in ctx.tool_agents:
             agents_desc.append(f'  • **{agent.name}**: {agent.description}')
-        
+
         output_instructions.append('---')
         output_instructions.append('### Agents You Can CALL as Tools')
         output_instructions.append(
             "These agents can be called as functions. Use call_agent(agent_name='AgentName', input='...'):\n"
         )
         if ctx.can_do_parallel_agent_calls:
-            output_instructions.append('You may call the Agents in parallel to save time. Do that when calling different agents, '
-                                       'best not to use the same agent in parallel')
+            output_instructions.append(
+                'You may call the Agents in parallel to save time. Do that when calling different agents, '
+                'best not to use the same agent in parallel'
+            )
         else:
-            output_instructions.append('Agents do not run in parallel, so if you call more than one agent at a time, they '
-                                       'will run sequentially and will not save time')
+            output_instructions.append(
+                'Agents do not run in parallel, so if you call more than one agent at a time, they '
+                'will run sequentially and will not save time'
+            )
         output_instructions.append('\n'.join(agents_desc))
         output_instructions.append('')
         output_instructions.append(
@@ -261,7 +263,6 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
         )
         output_instructions.append('')
 
-    output_str = '\n'.join(output_instructions)
+    output_str = 's\n'.join(output_instructions)
 
     return output_str
-

@@ -41,8 +41,8 @@ If handing off, use HandoffOutput with next_agent set to 'Expert' or 'Support'."
     swarm = PiplineCollab(
         agents=[
             CollabAgent(agent=intake, description='Intake agent', agent_calls=('Expert', 'Support')),
-            CollabAgent(agent=expert, description='Expert agent', agent_calls=()),
-            CollabAgent(agent=support, description='Support agent', agent_calls=()),
+            CollabAgent(agent=expert, description='Expert agent'),
+            CollabAgent(agent=support, description='Support agent'),
         ],
         max_handoffs=5,
     )
