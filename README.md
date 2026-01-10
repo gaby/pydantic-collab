@@ -1,6 +1,6 @@
 # pydantic-collab
 
-A declarative multi-agent orchestration framework built on [pydantic-ai](https://ai.pydantic.dev/).
+A Multi-Agent-System framework built on [pydantic-ai](https://ai.pydantic.dev/).
 
 ## Installation
 
@@ -10,7 +10,7 @@ pip install pydantic-collab
 
 ## Quick Start
 
-Define agent topologies declaratively. Agents communicate through **tool calls** (synchronous consultation) or **handoffs** (transfer of control).
+Define agent topologies through custom or pre-build topologies. Agents communicate through *tool calls* (synchronous consultation) or *handoffs* (transfer of control).
 
 ```python
 from pydantic_ai import Agent
