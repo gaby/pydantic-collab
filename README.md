@@ -296,13 +296,13 @@ result = swarm.run_sync("...", deps=MyDeps(db=db, cache=cache))
 
 See `examples/` directory for complete working examples:
 
-- `01_simple_chain.py` - Basic forward handoff pipeline
-- `02_bidirectional_chain.py` - Agents can handoff back
-- `04_mesh_network.py` - Full mesh collaboration
-- `08_mesh_with_tools.py` - Mesh topology with function tools
-- `10_handoff_include_history.py` - Configuring handoff context
-- `12_data_analysis_pipeline.py` - Complex multi-stage workflow
-- `create_topology_visualization.py` - Generate topology visualization
+- [`01_simple_chain.py`](examples/01_simple_chain.py) - Basic forward handoff pipeline
+- [`02_bidirectional_chain.py`](examples/02_bidirectional_chain.py) - Agents can handoff back
+- [`04_mesh_network.py`](examples/04_mesh_network.py) - Full mesh collaboration
+- [`08_mesh_with_tools.py`](examples/08_mesh_with_tools.py) - Mesh topology with function tools
+- [`10_handoff_include_history.py`](examples/10_handoff_include_history.py) - Configuring handoff context
+- [`12_data_analysis_pipeline.py`](examples/12_data_analysis_pipeline.py) - Complex multi-stage workflow
+- [`create_topology_visualization.py`](examples/create_topology_visualization.py) - Generate topology visualization
 
 Run examples:
 ```bash
