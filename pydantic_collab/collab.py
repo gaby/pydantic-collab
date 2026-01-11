@@ -257,7 +257,8 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         self.model = model
         self.model_settings = model_settings
         self._collab_settings = collab_settings if collab_settings is not None else CollabSettings()
-        self.usage_limits = usage_limits if usage_limits is not None else UsageLimits()
+        # Because there several agents are likely to run we upgrade the request limit to 150 instead of the default 50
+        self.usage_limits = usage_limits if usage_limits is not None else UsageLimits(request_limit=150)
         self.max_agent_call_depth = max_agent_call_depth
         self._allow_parallel_agent_calls = allow_parallel_agent_calls
 
