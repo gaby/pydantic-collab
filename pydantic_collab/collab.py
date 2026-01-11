@@ -22,6 +22,7 @@ from pydantic.json_schema import GenerateJsonSchema
 # =============================================================================
 from pydantic_ai import (
     AbstractToolset,
+    AgentRunError,
     AgentRunResult,
     FunctionToolset,
     ModelRequest,
@@ -894,7 +895,10 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
                 _state=state,
             )
         except Exception as e:
+            # We want to throw only pydantic-ai errors
             self._logger.error(f'Collab failed with exception: {e}')
+            if isinstance(e, AgentRunError):
+                raise e
         finally:
             if span is not None:
                 span.__exit__(None, None, None)
