@@ -15,7 +15,7 @@ from pydantic_collab._types import (
     HandOffBase,
     HandoffData,
     PromptBuilderContext,
-    get_right_handoff_model,
+    generate_handoff_pydantic_model,
 )
 from pydantic_collab._utils import (
     ensure_tuple,
@@ -68,7 +68,7 @@ class TestGetRightHandoffModel:
 
     def test_default_settings_creates_allow_fields(self):
         settings = CollabSettings()
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         # Check model can be instantiated
         instance = Model(next_agent='TestAgent', query='Test query')
@@ -83,7 +83,7 @@ class TestGetRightHandoffModel:
 
     def test_force_conversation_creates_classvar(self):
         settings = CollabSettings(include_conversation='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         # When forced, it's a ClassVar set to True
@@ -91,7 +91,7 @@ class TestGetRightHandoffModel:
 
     def test_disallow_conversation_creates_classvar(self):
         settings = CollabSettings(include_conversation='disallow')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         # When disallowed, it's a ClassVar set to False
@@ -99,28 +99,28 @@ class TestGetRightHandoffModel:
 
     def test_force_thinking_creates_classvar(self):
         settings = CollabSettings(include_thinking='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is True
 
     def test_disallow_thinking_creates_classvar(self):
         settings = CollabSettings(include_thinking='disallow')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is False
 
     def test_force_handoff_creates_classvar(self):
         settings = CollabSettings(include_handoff='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_previous_handoff is True
 
     def test_force_tool_calls_creates_classvar(self):
         settings = CollabSettings(include_tool_calls_with_callee='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_tool_calls_with_callee is True
@@ -132,7 +132,7 @@ class TestGetRightHandoffModel:
             include_handoff='force',
             include_tool_calls_with_callee='force',
         )
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is True
@@ -147,7 +147,7 @@ class TestGetRightHandoffModel:
             include_handoff='disallow',
             include_tool_calls_with_callee='disallow',
         )
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is False
@@ -157,13 +157,13 @@ class TestGetRightHandoffModel:
 
     def test_model_is_subclass_of_handoff_base(self):
         settings = CollabSettings()
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         assert issubclass(Model, HandOffBase)
 
     def test_model_with_reasoning(self):
         settings = CollabSettings()
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(
             next_agent='TestAgent', query='Test query', reasoning='Because reasons'

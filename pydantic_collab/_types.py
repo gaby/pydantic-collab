@@ -341,34 +341,31 @@ class CollabSettings:
 
     Controls how data flows between agents during handoffs and what information
     is included in context.
+    Most options are ´RegularOptions´ Literals.
+    disallow - Always no.
+    allow - allow agent to choose.
+    force - Always yes.
     """
 
     include_thinking: RegularOptions = 'disallow'
     """Control whether thinking parts are included in handoff context.
-    - "allow": Agent decides via HandoffOutput.include_thinking
-    - "force": Always include (field becomes ClassVar[bool] = True)
-    - "disallow": Never include (field becomes ClassVar[bool] = False)
+    "allow": Agent decides via HandoffOutput.include_thinking
     """
 
     include_conversation: RegularOptions = 'allow'
     """Control whether conversation history is included in handoff context.
-    - "allow": Agent decides via HandoffOutput.include_conversation
-    - "force": Always include
-    - "disallow": Never include
+    "allow": Agent decides via HandoffOutput.include_conversation
     """
 
     include_handoff: RegularOptions = 'allow'
-    """Control whether previous handoff context is accumulated.
-    - "allow": Agent decides via HandoffOutput.include_previous_handoff
-    - "force": Always include
-    - "disallow": Never include
+    """Control whether previous handoff context is accumulated. 
+    i.e. whether context from Agent A is sent by Agent B to Agent C when handing off.
+    "allow": Agent decides via HandoffOutput.include_previous_handoff
     """
 
     include_tool_calls_with_callee: RegularOptions = 'allow'
-    """Control whether tool calls with target agent are included.
-    - "allow": Agent decides via HandoffOutput.include_tool_calls_with_callee
-    - "force": Always include
-    - "disallow": Never include
+    """Control whether tool calls and their results with target agents are included in handoff context.
+    "allow": Agent decides via HandoffOutput.include_tool_calls_with_callee
     """
 
     output_restrictions: Literal['only_str', 'only_original', 'str_or_original'] = 'str_or_original'
@@ -393,7 +390,7 @@ class CollabSettings:
     if handoffs are available"""
 
 
-def get_right_handoff_model(settings: CollabSettings) -> type[HandOffBase[Any]]:
+def generate_handoff_pydantic_model(settings: CollabSettings) -> type[HandOffBase[Any]]:
     """Dynamically create HandoffOutput class based on Collab settings.
 
     Converts "force"/"disallow" settings into ClassVar fields that enforce

@@ -60,7 +60,7 @@ from ._types import (
     HandoffData,
     OutputDataT,
     PromptBuilderContext,
-    get_right_handoff_model,
+    generate_handoff_pydantic_model,
     t_agent_desc,
     t_agent_name,
     t_seq_or_one,
@@ -272,7 +272,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         self._enter_lock = Lock()
         self._entered_count = 0
         self._exit_stack = None
-        self._handoff_model = get_right_handoff_model(self._collab_settings)
+        self._handoff_model = generate_handoff_pydantic_model(self._collab_settings)
         # Build internal structures
         self._build_topology()
 
