@@ -15,8 +15,10 @@ from pydantic_collab._types import (
     HandOffBase,
     HandoffData,
     PromptBuilderContext,
-    ensure_tuple,
     get_right_handoff_model,
+)
+from pydantic_collab._utils import (
+    ensure_tuple,
 )
 
 

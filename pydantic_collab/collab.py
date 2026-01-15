@@ -60,13 +60,12 @@ from ._types import (
     HandoffData,
     OutputDataT,
     PromptBuilderContext,
-    ensure_tuple,
     get_right_handoff_model,
     t_agent_desc,
     t_agent_name,
     t_seq_or_one,
 )
-from ._utils import default_build_agent_prompt, get_context
+from ._utils import default_build_agent_prompt, ensure_tuple, get_context
 
 if TYPE_CHECKING:
     try:

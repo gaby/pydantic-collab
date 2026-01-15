@@ -17,30 +17,12 @@ from pydantic_ai import RunUsage
 from pydantic_ai.agent import AbstractAgent
 from typing_extensions import TypeAliasType
 
+from pydantic_collab._utils import ensure_tuple
+
 T = TypeVar('T')
 # =============================================================================
 # Utility Functions (defined here to avoid circular imports)
 # =============================================================================
-
-
-# For some reason tuple[Unpack[T]]  doesn't work in ruff
-def ensure_tuple(value: T) -> tuple[T] | T | None:
-    """Convert a value to a tuple, handling various input types.
-
-    Args:
-        value: Value to convert - can be None, tuple, list, set, frozenset, or single item
-
-    Returns:
-        None if value is None, the original tuple if already a tuple,
-        a tuple of the items if a collection, or a single-item tuple for other values
-    """
-    if value is None:
-        return None
-    if isinstance(value, tuple):
-        return value
-    elif isinstance(value, (list, set, frozenset)):
-        return tuple(value)
-    return (value,)
 
 
 # =============================================================================
