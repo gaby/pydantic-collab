@@ -130,6 +130,57 @@ swarm = Collab(
 )
 ```
 
+## Agent Memory
+
+Share persistent context between agents during a run. Memory is useful for accumulating knowledge, conventions, or decisions that multiple agents need to access.
+
+Each memory has a permission level:
+- `'r'` – read-only (injected into the agent's prompt)
+- `'rw'` – read-write (agent also gets a tool to append data)
+
+```python
+from pydantic_collab import PipelineCollab, CollabAgent, AgentMemory
+
+# Define a shared memory for code architecture decisions
+arch_memory = AgentMemory(
+    name="architecture",
+    description="Code architecture decisions and conventions for this project"
+)
+
+swarm = PipelineCollab(
+    agents=[
+        CollabAgent(
+            name="Architect",
+            system_prompt="Analyze the codebase and document architecture decisions",
+            memory={arch_memory: "rw"},  # Can read and write
+        ),
+        CollabAgent(
+            name="Developer",
+            system_prompt="Implement features following the documented conventions",
+            memory={arch_memory: "r"},  # Read-only access
+        ),
+    ],
+    model="openai:gpt-4o",
+)
+
+result = swarm.run_sync("Add a new API endpoint for user preferences")
+```
+
+In this example, the Architect agent analyzes the codebase and writes conventions to memory (e.g., "Use dependency injection for services", "Follow REST naming conventions"). The Developer agent sees these conventions in its prompt and follows them when implementing.
+
+Memory can also be declared with just names for quick setup:
+
+```python
+# Simple string syntax (defaults to 'rw')
+CollabAgent(name="Agent", memory="notes")
+
+# List syntax (all default to 'rw')
+CollabAgent(name="Agent", memory=["notes", "decisions"])
+
+# Dict syntax for explicit permissions
+CollabAgent(name="Agent", memory={"notes": "rw", "config": "r"})
+```
+
 ## Visualizing Topology
 
 Visualize your agent topology as a graph.

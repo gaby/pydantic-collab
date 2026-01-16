@@ -3,6 +3,7 @@
 __version__ = '0.1.2'
 
 from ._types import (
+    AgentMemory,
     CollabAgent,
     CollabError,
     CollabSettings,
@@ -16,6 +17,7 @@ from .custom_collabs import MeshCollab, PipelineCollab, StarCollab
 
 __all__ = [
     # Core
+    'AgentMemory',
     'CollabAgent',
     'Collab',
     'CollabState',
