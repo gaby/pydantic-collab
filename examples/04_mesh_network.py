@@ -13,7 +13,6 @@ Use case: Brainstorming, multi-disciplinary problem solving
 import asyncio
 
 import logfire
-from pydantic_ai import Agent
 
 from pydantic_collab import Collab, CollabAgent, MeshCollab
 
@@ -27,10 +26,13 @@ MODEL = "google-gla:gemini-2.0-flash"
 def create_swarm():
     """Create swarm with mesh topology."""
 
-    strategist = Agent(
-        MODEL,
-        name="Strategist",
-        system_prompt="""You are a business strategist in a collaborative team.
+    # Mesh topology: starting agent can call all others, others can call each other
+    swarm = MeshCollab(
+        agents=[
+            CollabAgent(
+                MODEL,
+                name="Strategist",
+                system_prompt="""You are a business strategist in a collaborative team.
 
 Your teammates (call them as tools when needed):
 - Technologist: Knows implementation details
@@ -38,12 +40,12 @@ Your teammates (call them as tools when needed):
 
 Collaborate to solve problems. Use call_agent to consult teammates.
 Provide a comprehensive strategic recommendation when ready.""",
-    )
-
-    technologist = Agent(
-        MODEL,
-        name="Technologist",
-        system_prompt="""You are a technologist in a collaborative team.
+                agent_calls=("Technologist", "Designer"),
+            ),
+            CollabAgent(
+                MODEL,
+                name="Technologist",
+                system_prompt="""You are a technologist in a collaborative team.
 
 Your teammates (call them as tools when needed):
 - Strategist: Handles business strategy
@@ -51,12 +53,12 @@ Your teammates (call them as tools when needed):
 
 Provide technical insights and implementation feasibility.
 Call teammates for their perspectives when helpful.""",
-    )
-
-    designer = Agent(
-        MODEL,
-        name="Designer",
-        system_prompt="""You are a UX designer in a collaborative team.
+                agent_calls=("Strategist", "Designer"),
+            ),
+            CollabAgent(
+                MODEL,
+                name="Designer",
+                system_prompt="""You are a UX designer in a collaborative team.
 
 Your teammates (call them as tools when needed):
 - Strategist: Handles business strategy
@@ -64,24 +66,6 @@ Your teammates (call them as tools when needed):
 
 Focus on user experience and usability.
 Call teammates for their perspectives when helpful.""",
-    )
-
-    # Mesh topology: starting agent can call all others, others can call each other
-    swarm = MeshCollab(
-        agents=[
-            CollabAgent(
-                agent=strategist,
-                description="Business strategist - handles strategy and business alignment",
-                agent_calls=("Technologist", "Designer"),
-            ),
-            CollabAgent(
-                agent=technologist,
-                description="Technologist - provides technical implementation insights",
-                agent_calls=("Strategist", "Designer"),
-            ),
-            CollabAgent(
-                agent=designer,
-                description="UX Designer - focuses on user experience",
                 agent_calls=("Strategist", "Technologist"),
             ),
         ],

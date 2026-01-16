@@ -13,16 +13,18 @@ pip install pydantic-collab
 Define agent topologies through custom or pre-build topologies. Agents communicate through *tool calls* (synchronous consultation) or *handoffs* (transfer of control).
 
 ```python
-from pydantic_ai import Agent
+from pydantic_collab import PipelineCollab, CollabAgent
 from pydantic_ai.builtin_tools import WebSearchTool
-from pydantic_collab import PipelineCollab
-
-intake = Agent(name="Intake", system_prompt="Summarize requests and relevant data from the internet",
-               builtin_tools=[WebSearchTool()])
-reporter = Agent(name="Reporter", system_prompt="Create final response")
 
 swarm = PipelineCollab(
-    agents=[(intake, "Intake agent"), (reporter, "Reporter agent")],
+    agents=[
+        CollabAgent(
+            name="Intake",
+            system_prompt="Summarize requests and relevant data from the internet",
+            builtin_tools=[WebSearchTool()],
+        ),
+        CollabAgent(name="Reporter", system_prompt="Create final response"),
+    ],
     model="openai:gpt-5.2"
 )
 
@@ -58,14 +60,13 @@ Use when an agent's part is done and control should transfer:
 ### Forward Chain Pipeline
 
 ```python
-from pydantic_ai import Agent
-from pydantic_collab import PipelineCollab
+from pydantic_collab import PipelineCollab, CollabAgent
 
 swarm = PipelineCollab(
     agents=[
-        (Agent(name="Intake", system_prompt="Summarize and hand off"), "Intake"),
-        (Agent(name="Analyst", system_prompt="Analyze and hand off"), "Analyst"),
-        (Agent(name="Reporter", system_prompt="Create final response"), "Reporter"),
+        CollabAgent(name="Intake", system_prompt="Summarize and hand off"),
+        CollabAgent(name="Analyst", system_prompt="Analyze and hand off"),
+        CollabAgent(name="Reporter", system_prompt="Create final response"),
     ],
     model="openai:gpt-4o-mini",
 )
@@ -74,14 +75,13 @@ swarm = PipelineCollab(
 ### Star Topology
 
 ```python
-from pydantic_ai import Agent
-from pydantic_collab import StarCollab
+from pydantic_collab import StarCollab, CollabAgent
 
 swarm = StarCollab(
     agents=[
-        (Agent(name="Coordinator", system_prompt="Route to specialists"), "Coordinator"),
-        (Agent(name="L1Support", system_prompt="Handle simple issues"), "L1"),
-        (Agent(name="L2Support", system_prompt="Handle complex issues"), "L2"),
+        CollabAgent(name="Coordinator", system_prompt="Route to specialists"),
+        CollabAgent(name="L1Support", system_prompt="Handle simple issues"),
+        CollabAgent(name="L2Support", system_prompt="Handle complex issues"),
     ],
     model="openai:gpt-4o-mini",
 )
@@ -90,14 +90,13 @@ swarm = StarCollab(
 ### Mesh Network
 
 ```python
-from pydantic_ai import Agent
-from pydantic_collab import MeshCollab
+from pydantic_collab import MeshCollab, CollabAgent
 
 swarm = MeshCollab(
     agents=[
-        (Agent(name="Strategist", system_prompt="Business strategy"), "Strategy"),
-        (Agent(name="Technologist", system_prompt="Technical feasibility"), "Tech"),
-        (Agent(name="Designer", system_prompt="User experience"), "Design"),
+        CollabAgent(name="Strategist", system_prompt="Business strategy"),
+        CollabAgent(name="Technologist", system_prompt="Technical feasibility"),
+        CollabAgent(name="Designer", system_prompt="User experience"),
     ],
     model="openai:gemini-2.5-pro",
 )
@@ -109,29 +108,22 @@ Define explicit tool calls and handoffs:
 
 ```python
 from pydantic_collab import Collab, CollabAgent
-from pydantic_ai import Agent
 
 swarm = Collab(
     agents=[
         CollabAgent(
-            agent=Agent(name="Router", system_prompt="Route requests"),
-            description="Routes requests",
+            name="Router",
+            system_prompt="Route requests",
             agent_calls="Researcher",  # Can call as tool
             agent_handoffs="Writer",  # Can transfer control
         ),
+        CollabAgent(name="Researcher", system_prompt="Research topics"),
         CollabAgent(
-            agent=Agent(name="Researcher", system_prompt="Research topics"),
-            description="Researches topics",
-        ),
-        CollabAgent(
-            agent=Agent(name="Writer", system_prompt="Write content"),
-            description="Writes content",
+            name="Writer",
+            system_prompt="Write content",
             agent_handoffs="Editor",
         ),
-        CollabAgent(
-            agent=Agent(name="Editor", system_prompt="Final editing"),
-            description="Final editing",
-        ),
+        CollabAgent(name="Editor", system_prompt="Final editing"),
     ],
     model="anthropic:claude-sonnet-4-5",
     final_agent="Editor",

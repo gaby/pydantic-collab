@@ -7,7 +7,6 @@ import asyncio
 
 import logfire
 from example_tools import summarize_tool
-from pydantic_ai import Agent
 
 from pydantic_collab import CollabAgent, PipelineCollab
 
@@ -19,29 +18,24 @@ MODEL = 'gemini-2.0-flash-lite'
 
 
 def create_swarm():
-    gatherer = Agent(
-        MODEL,
-        name='Gatherer',
-        system_prompt='You gather raw info and may call tools for summarization.',
-    )
-
-    editor = Agent(
-        MODEL,
-        name='Editor',
-        system_prompt='You refine gathered content into publishable form.',
-    )
-
-    publisher = Agent(
-        MODEL,
-        name='Publisher',
-        system_prompt='You format and return final content.',
-    )
-
     swarm = PipelineCollab(
         agents=[
-            CollabAgent(agent=gatherer, description='Gatherer'),
-            CollabAgent(agent=editor, description='Editor', agent_calls='Gatherer'),
-            CollabAgent(agent=publisher, description='Publisher'),
+            CollabAgent(
+                MODEL,
+                name='Gatherer',
+                system_prompt='You gather raw info and may call tools for summarization.',
+            ),
+            CollabAgent(
+                MODEL,
+                name='Editor',
+                system_prompt='You refine gathered content into publishable form.',
+                agent_calls='Gatherer',
+            ),
+            CollabAgent(
+                MODEL,
+                name='Publisher',
+                system_prompt='You format and return final content.',
+            ),
         ],
         max_handoffs=6,
         tools=summarize_tool,

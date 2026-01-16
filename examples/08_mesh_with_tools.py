@@ -7,7 +7,6 @@ as a builtin tool available to agents.
 import asyncio
 
 import logfire
-from pydantic_ai import Agent
 
 from pydantic_collab import Collab, CollabAgent, StarCollab
 from example_tools import search_tool
@@ -20,32 +19,28 @@ MODEL = "gemini-2.0-flash"
 
 
 def create_swarm():
-    strategist = Agent(
-        MODEL,
-        name="Strategist",
-        system_prompt="You coordinate and ask specialists for input before deciding.",
-    )
-
-    technologist = Agent(
-        MODEL,
-        name="Technologist",
-        system_prompt="You provide technical feasibility advice.",
-        tools=(search_tool,),
-    )
-
-    designer = Agent(
-        MODEL,
-        name="Designer",
-        system_prompt="You provide design considerations and UX feedback.",
-        tools=(search_tool,),
-    )
-
     # Use a star topology so only the strategist coordinates and calls specialists.
     swarm = StarCollab(
         agents=[
-            CollabAgent(agent=strategist, description="Coordinator"),
-            CollabAgent(agent=technologist, description="Tech expert", agent_calls=()),
-            CollabAgent(agent=designer, description="Design expert", agent_calls=()),
+            CollabAgent(
+                MODEL,
+                name="Strategist",
+                system_prompt="You coordinate and ask specialists for input before deciding.",
+            ),
+            CollabAgent(
+                MODEL,
+                name="Technologist",
+                system_prompt="You provide technical feasibility advice.",
+                tools=(search_tool,),
+                agent_calls=(),
+            ),
+            CollabAgent(
+                MODEL,
+                name="Designer",
+                system_prompt="You provide design considerations and UX feedback.",
+                tools=(search_tool,),
+                agent_calls=(),
+            ),
         ],
         max_handoffs=50,
     )

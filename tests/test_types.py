@@ -525,3 +525,67 @@ class TestAgentRunSummary:
     def test_messages_default_empty(self):
         summary = AgentRunSummary(agent_name='Test')
         assert summary.messages == []
+
+
+class TestCollabAgentCreatesAgent:
+    """Tests for CollabAgent creating an Agent when agent parameter is None."""
+
+    def test_creates_agent_with_basic_parameters(self):
+        """Test that CollabAgent creates an Agent with basic model and name parameters."""
+        collab_agent = CollabAgent(model='test', name='TestAgent', description='Test description')
+        direct_agent = Agent('test', name='TestAgent')
+
+        # Compare key attributes
+        assert collab_agent.agent.name == direct_agent.name
+        assert collab_agent.agent.model == direct_agent.model
+        assert collab_agent.name == 'TestAgent'
+
+    def test_creates_agent_with_output_type_and_instructions(self):
+        """Test that CollabAgent creates an Agent with output_type and instructions."""
+        def custom_instructions(ctx):
+            return "Custom instructions"
+
+        collab_agent = CollabAgent(
+            model='test',
+            name='InstructAgent',
+            output_type=str,
+            instructions=custom_instructions,
+            description='Agent with instructions'
+        )
+        direct_agent = Agent(
+            'test',
+            name='InstructAgent',
+            output_type=str,
+            instructions=custom_instructions
+        )
+
+        # Compare key attributes
+        assert collab_agent.agent.name == direct_agent.name
+        assert collab_agent.agent.model == direct_agent.model
+        assert collab_agent.agent._output_type == direct_agent._output_type
+
+    def test_creates_agent_with_system_prompt_and_deps_type(self):
+        """Test that CollabAgent creates an Agent with system_prompt and deps_type."""
+        system_prompts = ["You are a helpful assistant", "Always be concise"]
+
+        class MyDeps:
+            value: str = "test"
+
+        collab_agent = CollabAgent(
+            model='test',
+            name='PromptAgent',
+            system_prompt=system_prompts,
+            deps_type=MyDeps,
+            description='Agent with system prompt'
+        )
+        direct_agent = Agent(
+            'test',
+            name='PromptAgent',
+            system_prompt=system_prompts,
+            deps_type=MyDeps
+        )
+
+        # Compare key attributes
+        assert collab_agent.agent.name == direct_agent.name
+        assert collab_agent.agent.model == direct_agent.model
+        assert collab_agent.agent.deps_type == direct_agent.deps_type

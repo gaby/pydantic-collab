@@ -8,7 +8,6 @@ message history as part of its prompt builder context.
 import asyncio
 
 import logfire
-from pydantic_ai import Agent
 
 from pydantic_collab import Collab, CollabAgent, StarCollab
 from example_tools import generic_tool
@@ -20,13 +19,10 @@ MODEL = "gemini-2.0-flash"
 
 
 def create_swarm():
-    lead = Agent(MODEL, name="Lead", system_prompt="You decide whether to escalate.")
-    expert = Agent(MODEL, name="Expert", system_prompt="You are an expert who needs previous convo.")
-
     swarm = StarCollab(
         agents=[
-            CollabAgent(agent=lead, description="Lead", agent_calls=("Expert",)),
-            CollabAgent(agent=expert, description="Expert", agent_calls=()),
+            CollabAgent(MODEL, name="Lead", system_prompt="You decide whether to escalate.", agent_calls=("Expert",)),
+            CollabAgent(MODEL, name="Expert", system_prompt="You are an expert who needs previous convo.", agent_calls=()),
         ],
         max_handoffs=3,
         tools=(generic_tool,)
