@@ -557,7 +557,7 @@ class CollabSettings:
 
     Controls how data flows between agents during handoffs and what information
     is included in context.
-    Most options are ´RegularOptions´ Literals.
+    Most options are `RegularOptions` Literals.
     disallow - Always no.
     allow - allow agent to choose.
     force - Always yes.
