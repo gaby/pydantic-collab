@@ -1,83 +1,86 @@
-# pydantic-collab
+<div align="center">
+
+<h1>pydantic-collab</h1>
+
+**Build AI agent teams that collaborate intelligently — with handoffs, consultations, and shared memory.**
 
 [![PyPI version](https://img.shields.io/pypi/v/pydantic-collab)](https://pypi.org/project/pydantic-collab/)
 [![Tests](https://img.shields.io/github/actions/workflow/status/boazkatzir/pydantic-collab/ci.yml?label=tests)](https://github.com/boazkatzir/pydantic-collab/actions)
 [![License](https://img.shields.io/pypi/l/pydantic-collab)](https://github.com/boazkatzir/pydantic-collab/blob/main/LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A Multi-Agent-System framework built on [pydantic-ai](https://ai.pydantic.dev/).
+</div>
 
-## Installation
+
+## Features
+
+- 🤝 **Tool calls & handoffs** — Agents consult each other or transfer control
+- 🕸️ **Pre-built topologies** — Pipeline, Star, Mesh, or fully custom graphs
+- 🧠 **Shared agent memory** — Persistent context across agents during a run
+- 🗺️ **Topology visualization** — See your agent graph as an image
+- 🐍 **Pydantic-AI Native** - Use Pydantic-AI and Logfire observability
+- ⚙️ **Configurable context passing** — Control what flows between agents
+
+##  Installation
 
 ```bash
 pip install pydantic-collab
 ```
 
-## Quick Start
-
-Define agent topologies through custom or pre-build topologies. Agents communicate through *tool calls* (synchronous consultation) or *handoffs* (transfer of control).
+## 🚀 Quick Start
 
 ```python
 from pydantic_collab import PipelineCollab, CollabAgent
-from pydantic_ai.builtin_tools import WebSearchTool
 
 collab = PipelineCollab(
     agents=[
-        CollabAgent(
-            name="Intake",
-            system_prompt="Summarize requests and relevant data from the internet",
-            builtin_tools=[WebSearchTool()],
-        ),
-        CollabAgent(name="Reporter", system_prompt="Create final response"),
+        CollabAgent(name="Researcher", system_prompt="Research the topic thoroughly"),
+        CollabAgent(name="Writer", system_prompt="Write a clear, engaging response"),
     ],
-    model="openai:gpt-5.2"
+    model="openai:gpt-4o-mini",
 )
 
-result = collab.run_sync("Plan a birthday party for a celebrity that was born today")
+result = collab.run_sync("Explain how neural networks learn")
 print(result.output)
 ```
 
-## Tool Calls and Handoffs
+## When to Use This
 
-### Tool Calls (`agent_calls`)
-Use when an agent needs help from another agent but is still in charge:
-- Agent consults another agent synchronously
-- Caller receives response and continues execution
-- Memory can persist across calls (controllable by the caller agent)
-- Depth of call recursion controlled by `max_agent_call_depth` (default: 3)
-- Parallel execution enabled by default, can be enabled through `allow_parallel_agent_calls`
+Use **pydantic-collab** when you need multiple specialized agents working together, without the need of human 
+intervention.
 
-**Example:** Coordinator needs specialist input before deciding.
+**Relevant Use Cases:**
+- Multi-stage workflows (research → analyze → write)
+- Specialist teams (coordinator + domain experts)
+- Complex tasks requiring different perspectives
+- continuous Feedback task (executor <> feedback giver) 
 
-### Handoffs (`agent_handoffs`)
-Use when an agent's part is done and control should transfer:
-- Agent transfers control permanently
-- Transferring agent stops processing
-- Receiving agent gets context (configurable by the user and by the transferring agent)
-- Counts toward `max_handoffs` limit
+## ⚒️  🤝 Tool Calls vs Handoffs
 
-**Example:** Pipeline stages (Intake → Analysis → Report).
-
-**Rule of thumb:** Tool calls for "help me with X", handoffs for "take over from here".
+| | Tool Calls (`agent_calls`) | Handoffs (`agent_handoffs`) |
+|---|---|---|
+| **Purpose** | Get help, stay in control | Transfer control completely |
+| **After call** | Caller continues | Caller stops |
+| **Use when** | Help me with X | Take over from here |
 
 ## Common Topologies
 
-### Forward Chain Pipeline
+### Pipeline (Sequential)
 
 ```python
 from pydantic_collab import PipelineCollab, CollabAgent
 
 collab = PipelineCollab(
     agents=[
-        CollabAgent(name="Intake", system_prompt="Summarize and hand off"),
-        CollabAgent(name="Analyst", system_prompt="Analyze and hand off"),
+        CollabAgent(name="Intake", system_prompt="Summarize the request"),
+        CollabAgent(name="Analyst", system_prompt="Analyze in depth"),
         CollabAgent(name="Reporter", system_prompt="Create final response"),
     ],
     model="openai:gpt-4o-mini",
 )
 ```
 
-### Star Topology
+### Star (Hub & Spoke)
 
 ```python
 from pydantic_collab import StarCollab, CollabAgent
@@ -92,7 +95,7 @@ collab = StarCollab(
 )
 ```
 
-### Mesh Network
+### Mesh (Everyone talks to everyone)
 
 ```python
 from pydantic_collab import MeshCollab, CollabAgent
@@ -103,11 +106,12 @@ collab = MeshCollab(
         CollabAgent(name="Technologist", system_prompt="Technical feasibility"),
         CollabAgent(name="Designer", system_prompt="User experience"),
     ],
-    model="openai:gemini-2.5-pro",
+    model="openai:gpt-4o-mini",
 )
 ```
 
-### Custom Topology
+<details>
+<summary><b>Custom Topology</b></summary>
 
 Define explicit tool calls and handoffs:
 
@@ -119,8 +123,8 @@ collab = Collab(
         CollabAgent(
             name="Router",
             system_prompt="Route requests",
-            agent_calls="Researcher",  # Can call as tool
-            agent_handoffs="Writer",  # Can transfer control
+            agent_calls="Researcher",      # Can call as tool
+            agent_handoffs="Writer",       # Can transfer control
         ),
         CollabAgent(name="Researcher", system_prompt="Research topics"),
         CollabAgent(
@@ -130,146 +134,120 @@ collab = Collab(
         ),
         CollabAgent(name="Editor", system_prompt="Final editing"),
     ],
-    model="anthropic:claude-sonnet-4-5",
+    model="openai:gpt-4o-mini",
     final_agent="Editor",
 )
 ```
 
-## Agent Memory
+</details>
 
-Share persistent context between agents during a run. Memory is useful for accumulating knowledge, conventions, or decisions that multiple agents need to access.
+## 🧠 Agent Memory
 
-Each memory has a permission level:
-- `'r'` – read-only (injected into the agent's prompt)
-- `'rw'` – read-write (agent also gets a tool to append data)
+Share persistent context between agents during a run:
 
 ```python
 from pydantic_collab import PipelineCollab, CollabAgent, AgentMemory
 
-# Define a shared memory for code architecture decisions
 arch_memory = AgentMemory(
     name="architecture",
-    description="Code architecture decisions and conventions for this project"
+    description="Code architecture decisions and conventions"
 )
 
 collab = PipelineCollab(
     agents=[
         CollabAgent(
             name="Architect",
-            system_prompt="Analyze the codebase and document architecture decisions",
+            system_prompt="Document architecture decisions",
             memory={arch_memory: "rw"},  # Can read and write
         ),
         CollabAgent(
             name="Developer",
-            system_prompt="Implement features following the documented conventions",
-            memory={arch_memory: "r"},  # Read-only access
+            system_prompt="Implement following the conventions",
+            memory={arch_memory: "r"},   # Read-only
         ),
     ],
-    model="openai:gpt-4o",
+    model="openai:gpt-4o-mini",
 )
-
-result = collab.run_sync("Add a new API endpoint for user preferences")
 ```
 
-In this example, the Architect agent analyzes the codebase and writes conventions to memory (e.g., "Use dependency injection for services", "Follow REST naming conventions"). The Developer agent sees these conventions in its prompt and follows them when implementing.
-
-Memory can also be declared with just names for quick setup:
+<details>
+<summary><b>AgentMemory syntax</b></summary>
 
 ```python
-# Simple string syntax (defaults to 'rw')
+# Simple string (defaults to 'rw')
 CollabAgent(name="Agent", memory="notes")
 
-# List syntax (all default to 'rw')
+# List (all default to 'rw')
 CollabAgent(name="Agent", memory=["notes", "decisions"])
 
-# Dict syntax for explicit permissions
+# Dict for explicit permissions
 CollabAgent(name="Agent", memory={"notes": "rw", "config": "r"})
 ```
 
+</details>
+
 ## Visualizing Topology
 
-Visualize your agent topology as a graph.
 ```python
 collab = Collab(...)
-# Automatically opens image in a window (default behavior)
-collab.visualize_topology()
-# Or save to file
-collab.visualize_topology(save_path="topology.png", show=False)
+collab.visualize_topology()  # Opens image
+collab.visualize_topology(save_path="topology.png", show=False)  # Save to file
 ```
 
-**Installation:** Requires visualization dependencies:
 ```bash
-pip install pydantic-collab[viz]
+pip install pydantic-collab[viz]  # Requires visualization dependencies
 ```
-### Example
-![Topology_image](docs/topology_example.png)
+
+![Topology example](docs/topology_example.png)
+
 ## Adding Tools
-
-
-### Custom Tools for All Agents
 
 ```python
 collab = Collab(agents=[...], model="openai:gpt-4o-mini")
 
 @collab.tool_plain
-async def power(num1: int, num2: int) -> int:
-    """Returns num1 powered by num2"""
-    return num1 ** num2
-```
+async def calculate(expression: str) -> float:
+    """Evaluate a math expression."""
+    return eval(expression)
 
-### Custom Tools for Specific Agents
-
-```python
-@collab.tool_plain(agents=("Researcher", "Analyst"))
-async def fetch_data(url: str) -> str:
-    """Fetch data from URL."""
-    return f"Data from {url}"
-
-
-@collab.tool(agents=("Writer",))
-async def save_draft(ctx: RunContext[MyDeps], content: str) -> str:
-    """Save draft."""
-    await ctx._deps.storage.save(content)
-    return "Saved!"
+@collab.tool_plain(agents=("Researcher",))  # Only for specific agents
+async def search(query: str) -> str:
+    """Search the web."""
+    return f"Results for: {query}"
 ```
 
 ## Result Object
 
 ```python
-result = await collab.run("Query")
-# or
 result = collab.run_sync("Query")
 
 result.output              # Final output
 result.final_agent         # Agent that produced output
-result.iterations          # Number of handoffs
 result.execution_path      # ["Intake", "Analyst", "Reporter"]
-result.execution_history   # Detailed step-by-step history
 result.usage               # Token usage statistics
-result.all_messages()     # Full message history
 
 print(result.print_execution_flow())  # Visual flow diagram
 ```
 
 ## Configuration
 
-### Execution Limits
+<details>
+<summary><b>Execution Limits</b></summary>
 
 ```python
 collab = Collab(
     agents=[...],
-    max_handoffs=10,              # Maximum handoff iterations (default: 10)
-    max_agent_call_depth=3,       # Maximum recursive tool call depth (default: 3)
+    max_handoffs=10,           # Maximum handoff iterations (default: 10)
+    max_agent_call_depth=3,    # Maximum recursive tool call depth (default: 3)
 )
 ```
 
-### Handoff Settings
+</details>
 
-Control what information flows between agents during handoffs.
-Most settings accept three values: 
-- *allow* - Agent decides every handoff
-- *disallow" - Always false, agent has no say
-- *allow* - Always true, agent has not say.
+<details>
+<summary><b>Handoff Settings</b></summary>
+
+Control what information flows between agents during handoffs:
 
 ```python
 from pydantic_collab import CollabSettings
@@ -277,21 +255,21 @@ from pydantic_collab import CollabSettings
 collab = Collab(
     agents=[...],
     collab_settings=CollabSettings(
-        include_conversation="allow",  # 
-        include_thinking="disallow",  # Include thinking/reasoning parts
-        include_handoff="allow",  # Accumulate previous handoff context
-        include_tool_calls_with_callee="allow",  # Include tool calls with target agent
-        output_restrictions="str_or_original",  # "only_str", "only_original", "str_or_original"
-        include_topology_in_prompt=True,  # Show topology to agents (default: True)
+        include_conversation="allow",      # "allow", "disallow", "force"
+        include_thinking="disallow",
+        include_handoff="allow",
+        include_topology_in_prompt=True,
     ),
 )
 ```
 
-### Custom Prompt Builder
+</details>
+
+<details>
+<summary><b>Custom Prompt Builder</b></summary>
 
 ```python
-from pydantic_collab import Collab, PromptBuilderContext, CollabSettings
-
+from pydantic_collab import PromptBuilderContext, CollabSettings
 
 def my_prompt_builder(ctx: PromptBuilderContext) -> str:
     lines = [f"Agent: {ctx.agent.name}"]
@@ -299,64 +277,42 @@ def my_prompt_builder(ctx: PromptBuilderContext) -> str:
         lines.append(f"Hand off to: {', '.join(a.name for a in ctx.handoff_agents)}")
     return "\n".join(lines)
 
-
 collab = Collab(
     agents=[...],
     collab_settings=CollabSettings(prompt_builder=my_prompt_builder),
 )
 ```
 
-### Custom Context Builder
+</details>
 
-```python
-from pydantic_collab import HandoffData, CollabSettings
+<details>
+<summary><b>Using Dependencies</b></summary>
 
-
-def my_context_builder(data: HandoffData) -> str:
-    parts = [f"From {data.caller_agent_name}:"]
-    if data.message_history:
-        parts.append("Previous conversation included")
-    return "\n".join(parts)
-
-
-collab = Collab(
-    agents=[...],
-    collab_settings=CollabSettings(context_builder=my_context_builder),
-)
-```
-
-### Using Dependencies
 ```python
 from pydantic import BaseModel
-from pydantic_collab import Collab
 
 class MyDeps(BaseModel):
     db: Database
     cache: Cache
 
-collab = Collab(
-    agents=[...],
-)
+collab = Collab(agents=[...])
 result = collab.run_sync("...", deps=MyDeps(db=db, cache=cache))
 ```
 
+</details>
+
 ## Examples
 
-See `examples/` directory for complete working examples:
+See [`examples/`](examples/) for complete working examples:
 
-- [`01_simple_chain.py`](examples/01_simple_chain.py) - Basic forward handoff pipeline
-- [`02_bidirectional_chain.py`](examples/02_bidirectional_chain.py) - Agents can handoff back
-- [`04_mesh_network.py`](examples/04_mesh_network.py) - Full mesh collaboration
-- [`08_mesh_with_tools.py`](examples/08_mesh_with_tools.py) - Mesh topology with function tools
-- [`10_handoff_include_history.py`](examples/10_handoff_include_history.py) - Configuring handoff context
-- [`12_data_analysis_pipeline.py`](examples/12_data_analysis_pipeline.py) - Complex multi-stage workflow
-- [`create_topology_visualization.py`](examples/create_topology_visualization.py) - Generate topology visualization
+| Example | Description |
+|---------|-------------|
+| [`01_simple_chain.py`](examples/01_simple_chain.py) | Basic forward handoff pipeline |
+| [`02_bidirectional_chain.py`](examples/02_bidirectional_chain.py) | Agents can handoff back |
+| [`04_mesh_network.py`](examples/04_mesh_network.py) | Full mesh collaboration |
+| [`08_mesh_with_tools.py`](examples/08_mesh_with_tools.py) | Mesh with function tools |
+| [`12_data_analysis_pipeline.py`](examples/12_data_analysis_pipeline.py) | Complex multi-stage workflow |
 
-Run examples:
 ```bash
 uv run --env-file .env examples/01_simple_chain.py
 ```
-
-## License
-
-MIT
