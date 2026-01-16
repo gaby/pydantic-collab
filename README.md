@@ -4,6 +4,7 @@
 
 **Build AI agent teams that collaborate intelligently — with handoffs, consultations, and shared memory.**
 
+
 [![PyPI version](https://img.shields.io/pypi/v/pydantic-collab)](https://pypi.org/project/pydantic-collab/)
 [![Tests](https://img.shields.io/github/actions/workflow/status/boazkatzir/pydantic-collab/ci.yml?label=tests)](https://github.com/boazkatzir/pydantic-collab/actions)
 [![License](https://img.shields.io/pypi/l/pydantic-collab)](https://github.com/boazkatzir/pydantic-collab/blob/main/LICENSE)
@@ -18,7 +19,7 @@
 - 🕸️ **Pre-built topologies** — Pipeline, Star, Mesh, or fully custom graphs
 - 🧠 **Shared agent memory** — Persistent context across agents during a run
 - 🗺️ **Topology visualization** — See your agent graph as an image
-- 🐍 **Pydantic-AI Native** - Use Pydantic-AI and Logfire observability
+- 🐍 **Pydantic-AI Native** — Use Pydantic-AI and Logfire observability
 - ⚙️ **Configurable context passing** — Control what flows between agents
 
 ##  Installation
