@@ -49,6 +49,7 @@ from pydantic_ai.tools import (
 
 # SystemPromptFunc not used directly here; avoid unused import
 from ._types import (
+    MAXIMUM_MEM_LINE_LENGTH,
     AgentDepsT,
     AgentMemory,
     AgentRunSummary,
@@ -153,6 +154,9 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
     _exit_stack: AsyncExitStack | None = field(default=None, init=False, repr=False)
     _handoff_model: type[HandOffBase[Any]] | None | None = field(default=None, init=False, repr=False)
     _allow_parallel_agent_calls: bool = field(default=True, init=False, repr=False)
+
+    # Memory
+    _memory_objects: dict[AgentMemory, list[str]] = field(init=False, default_factory=dict, repr=False)
 
     def __init__(
         self,
@@ -832,6 +836,10 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             span = self._logfire.span(f'{self.name or "Agent"} Collab Run').__enter__()
         else:
             span = None
+
+        # The memory is reset for each run right now
+        # TODO: make it dynamic per user's with
+        self._memory_objects = defaultdict(list)
         try:
             deps_parsed: dict[t_agent_name, AgentDepsT] = {}
             if isinstance(deps, dict):
@@ -946,7 +954,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             return our_handoff_model[inner_type]
         return inner_type
 
-    async def _get_add_to_memory_tool(self, agent_mem: AgentMemory, context: list[str]) -> Tool:
+    def _get_add_to_memory_tool(self, agent_mem: AgentMemory, context: list[str]) -> Tool:
         """This function is used to get the tool that is used to use agent calls between agents.
 
         Args:
@@ -958,18 +966,25 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         """
 
         # Doesn't need to be async but pydantic-ai prefers it that way
-        async def add_to_memory(ctx: RunContext[AgentDepsT], info: str) -> None:
+        async def add_to_memory(ctx: RunContext[AgentDepsT], info: str) -> None | str:
             # I get ctx here because we're gonna need it for later probably
+            if len(info) == 0:
+                return "Info can't be empty."
+            if len(info) > MAXIMUM_MEM_LINE_LENGTH:
+                return (
+                    f"Info can't be longer than {MAXIMUM_MEM_LINE_LENGTH}. Data won't be added, call again with "
+                    'less data'
+                )
             context.append(info)
-            return
+            return None
 
         documentation = f"""Add more information to the memory of {agent_mem.name}.
 
             Args:
-                info: String of the information to add. 
+                info: String of the information to add. Maximum length is {MAXIMUM_MEM_LINE_LENGTH} 
 
             Returns:
-                None
+                None or string if an error occurred
             """
         add_to_memory_tool = Tool(
             add_to_memory, takes_ctx=True, description=documentation, name=f'add_to_{agent_mem.name}_mem'

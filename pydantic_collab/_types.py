@@ -32,7 +32,7 @@ from pydantic_ai.output import OutputSpec
 from pydantic_ai.tools import BuiltinToolFunc, ToolFuncEither, ToolsPrepareFunc
 from typing_extensions import TypeAliasType
 
-from pydantic_collab._utils import ensure_tuple, str_or_am_to_am
+from pydantic_collab._utils import ensure_tuple, str_or_am_to_am, validate_r_rw
 
 T = TypeVar('T')
 # =============================================================================
@@ -53,6 +53,7 @@ t_agent_desc: TypeAlias = 'str | AbstractAgent | CollabAgent'
 t_seq_or_one = TypeAliasType('t_seq_or_one', T | Sequence[T], type_params=(T,))
 t_context_name = str
 
+MAXIMUM_MEM_LINE_LENGTH = 8192
 # =============================================================================
 # Exceptions
 # =============================================================================
@@ -342,7 +343,7 @@ class CollabAgent:
             agent_calls: Which other agents can be called
             agent_handoffs: Which other agents can hand off to
             memory: A dictionary, list or instance of AgentMemory or strings (only names) of Context options available
-                to the Agents. If supplied as a dicrionary, keys should be either 'r' or 'rw' - signifying if context
+                to the Agents. If supplied as a dictionary, values should be either 'r' or 'rw' - signifying if context
                 should be writable using a dedicated tool or only read in the system prompt.
             output_type: The type of the output data, used to validate the data returned by the model,
                 defaults to `str`.
@@ -441,7 +442,9 @@ class CollabAgent:
                 memory = [memory]
             if isinstance(memory, (list, tuple, set, frozenset)):
                 memory = {ctx: 'rw' for ctx in memory}
-            memory = {str_or_am_to_am(ctx): v for ctx, v in memory.items()}
+            memory = {str_or_am_to_am(ctx): validate_r_rw(v) for ctx, v in memory.items()}
+            if len(set(mem.name for mem in memory)) < len(memory):
+                raise ValueError('Memory names must be unique.')
         object.__setattr__(self, 'memory', memory or {})
         object.__setattr__(self, 'name', name or agent.name)
 

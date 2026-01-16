@@ -6,7 +6,7 @@ history, and extracting tool calls. Users should not import from this module dir
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic_ai import (
     BaseToolCallPart,
@@ -264,9 +264,10 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:  # noqa: C901
         output_instructions.append('')
 
     if ctx.context_info:
-        output_instructions.append('---\n## Relevant Contexts for Agent:\n')
+        output_instructions.append('---\n## Relevant Memories for Agent:\n')
         for agent_mem, data in ctx.context_info.items():
-            if not data:
+            # If it's not writable and there's no data, we shouldn't care about this memory
+            if not data and 'w' not in ctx.agent.memory[agent_mem]:
                 continue
             output_instructions.append(f'## {agent_mem.name}')
             if agent_mem.description:
@@ -274,6 +275,7 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:  # noqa: C901
             if 'w' in ctx.agent.memory[agent_mem]:
                 output_instructions.append(f'You may also add to this context using add_to_{agent_mem.name}_mem.')
             output_instructions.extend(['### Data:', *data, ''])
+        output_instructions.append('---')
 
     output_str = '\n'.join(output_instructions)
 
@@ -304,3 +306,9 @@ def str_or_am_to_am(mem: AgentMemory | str) -> AgentMemory:
     if isinstance(mem, str):
         return AgentMemory(name=mem)
     return mem
+
+
+def validate_r_rw(r_or_rw: str) -> Literal['r', 'rw']:
+    if r_or_rw not in ('r', 'rw'):
+        raise RuntimeError(f'Value needs to be either r or rw - got {r_or_rw}')
+    return r_or_rw
