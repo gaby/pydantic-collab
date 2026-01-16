@@ -50,6 +50,7 @@ from pydantic_ai.tools import (
 # SystemPromptFunc not used directly here; avoid unused import
 from ._types import (
     AgentDepsT,
+    AgentMemory,
     AgentRunSummary,
     CollabAgent,
     CollabError,
@@ -206,6 +207,8 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             instrument_logfire: Whether to instruments Logfire. If true, logfire will be used if it can be imported and
                 has *already* been configured.
         """
+        # Those objects are there to store memory between or in Agents.
+        self._memory_objects: dict[AgentMemory, list[str]] = defaultdict(list)
         self._logger = None
         self._name_to_agent = {}
         self._instrument_logfire = instrument_logfire
@@ -723,6 +726,9 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             max_agent_calls_depths_allowed = self.max_agent_call_depth
         if deps is None:
             deps = {}
+
+        tool_calls = []
+        memory_info_by_obj: dict[AgentMemory, list[str]] = {}
         # Determine c_agent capabilities
         is_final = self._is_final_agent(c_agent)
 
@@ -745,6 +751,19 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             topology = self.get_topology_ascii()
         else:
             topology = None
+        toolsets = (*self._toolsets, *self._dynamic_toolsets, self._toolset_by_agent[c_agent])
+        if tool_agents:
+            tool_calls.append(self._get_agent_call_tool(c_agent, state, max_agent_calls_depths_allowed, deps))
+        for agent_mem, perms in c_agent.memory.items():
+            memory_object = memory_info_by_obj[agent_mem] = self._memory_objects[agent_mem]
+            if 'w' in perms:
+                tool_calls.append(self._get_add_to_memory_tool(agent_mem, memory_object))
+
+        if tool_calls:
+            toolsets = (*toolsets, FunctionToolset(tool_calls))
+
+        self._already_handed_off.add(c_agent)
+
         # Build prompt using the configurable prompt builder
         prompt_ctx = PromptBuilderContext(
             agent=c_agent,
@@ -754,16 +773,11 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             tool_agents=tool_agents,
             called_as_tool=is_tool_run,
             ascii_topology=topology,
+            context_info=memory_info_by_obj,
         )
         prompt_builder = self._collab_settings.prompt_builder or default_build_agent_prompt
         info_about_agents = prompt_builder(prompt_ctx)
         user_prompt = f'{info_about_agents}\n\n{context_from_handoff or ""}'.strip() + f'\n\n# Query: {query}'
-        toolsets = (*self._toolsets, *self._dynamic_toolsets, self._toolset_by_agent[c_agent])
-        if tool_agents:
-            tool_call = self._get_agent_call_tool(c_agent, state, max_agent_calls_depths_allowed, deps)
-            toolsets = (*toolsets, FunctionToolset((tool_call,)))
-
-        self._already_handed_off.add(c_agent)
 
         # Run the c_agent with the constrained output type, check time it takes to run
         start_time = datetime.datetime.now()
@@ -931,6 +945,36 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             our_handoff_model = self._get_explicit_handoff_model(handoff_agents)
             return our_handoff_model[inner_type]
         return inner_type
+
+    async def _get_add_to_memory_tool(self, agent_mem: AgentMemory, context: list[str]) -> Tool:
+        """This function is used to get the tool that is used to use agent calls between agents.
+
+        Args:
+            agent_mem: The memory artifact to use
+            context: The context to use.
+
+        Returns:
+            Tool: The tool that is used to use agent calls between agents
+        """
+
+        # Doesn't need to be async but pydantic-ai prefers it that way
+        async def add_to_memory(ctx: RunContext[AgentDepsT], info: str) -> None:
+            # I get ctx here because we're gonna need it for later probably
+            context.append(info)
+            return
+
+        documentation = f"""Add more information to the memory of {agent_mem.name}.
+
+            Args:
+                info: String of the information to add. 
+
+            Returns:
+                None
+            """
+        add_to_memory_tool = Tool(
+            add_to_memory, takes_ctx=True, description=documentation, name=f'add_to_{agent_mem.name}_mem'
+        )
+        return add_to_memory_tool
 
     def _get_agent_call_tool(
         self,

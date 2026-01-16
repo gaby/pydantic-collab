@@ -32,7 +32,7 @@ from pydantic_ai.output import OutputSpec
 from pydantic_ai.tools import BuiltinToolFunc, ToolFuncEither, ToolsPrepareFunc
 from typing_extensions import TypeAliasType
 
-from pydantic_collab._utils import ensure_tuple
+from pydantic_collab._utils import ensure_tuple, str_or_am_to_am
 
 T = TypeVar('T')
 # =============================================================================
@@ -51,6 +51,7 @@ OutputDataT = TypeVar('OutputDataT')
 # Can be an agent name, an AbstractAgent instance, or a CollabAgent wrapper
 t_agent_desc: TypeAlias = 'str | AbstractAgent | CollabAgent'
 t_seq_or_one = TypeAliasType('t_seq_or_one', T | Sequence[T], type_params=(T,))
+t_context_name = str
 
 # =============================================================================
 # Exceptions
@@ -97,7 +98,7 @@ class AgentRunSummary:
 class CollabState:
     """Dynamic state for a Collab execution.
 
-    Automatically creates per-agent contexts based on registered agents.
+    Automatically creates per-agent memory based on registered agents.
     """
 
     query: str
@@ -208,6 +209,19 @@ class CollabRunResult(Generic[OutputDataT]):
 
 
 # =============================================================================
+# Agent Memory
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class AgentMemory:
+    name: t_context_name
+    """The name of this memory"""
+    description: str | None = None
+    """LLM-readable description of this memory and when to use it."""
+
+
+# =============================================================================
 # Agent Connection/Wrapper
 # =============================================================================
 
@@ -237,7 +251,7 @@ class CollabAgent:
     name: str | None = None
     """Name of this Collab Agent. Used by other agents for choosing how to hand over"""
 
-    preserve_context_between_tool_calls: RegularOptions = 'allow'
+    memory: dict[AgentMemory, Literal['r', 'rw']] = field(default_factory=dict)
 
     @overload
     def __init__(
@@ -247,6 +261,9 @@ class CollabAgent:
         *,
         agent_calls: t_agent_desc | Sequence[t_agent_desc] = (),
         agent_handoffs: t_agent_desc | Sequence[t_agent_desc] = (),
+        memory: dict[t_context_name | AgentMemory, Literal['r', 'rw']]
+        | Sequence[t_context_name | AgentMemory]
+        | None = None,
         output_type: OutputSpec[OutputDataT] = str,
         instructions: Instructions[AgentDepsT] = None,
         system_prompt: str | Sequence[str] = (),
@@ -279,6 +296,7 @@ class CollabAgent:
         *,
         agent_calls: t_agent_desc | Sequence[t_agent_desc] = (),
         agent_handoffs: t_agent_desc | Sequence[t_agent_desc] = (),
+        memory: dict[t_context_name, Literal['r', 'rw']] | Sequence[t_context_name] | None = None,
         name: str | None = None,
     ) -> None: ...
 
@@ -290,6 +308,7 @@ class CollabAgent:
         *,
         agent_calls: t_agent_desc | Sequence[t_agent_desc] = (),
         agent_handoffs: t_agent_desc | Sequence[t_agent_desc] = (),
+        memory: dict[t_context_name, Literal['r', 'rw']] | Sequence[t_context_name] | t_context_name | None = None,
         output_type: OutputSpec[OutputDataT] = str,
         instructions: Instructions[AgentDepsT] = None,
         system_prompt: str | Sequence[str] = (),
@@ -322,6 +341,9 @@ class CollabAgent:
             description: LLM readable description of this agent. Required for all agents that aren't the starting agent.
             agent_calls: Which other agents can be called
             agent_handoffs: Which other agents can hand off to
+            memory: A dictionary, list or instance of AgentMemory or strings (only names) of Context options available
+                to the Agents. If supplied as a dicrionary, keys should be either 'r' or 'rw' - signifying if context
+                should be writable using a dedicated tool or only read in the system prompt.
             output_type: The type of the output data, used to validate the data returned by the model,
                 defaults to `str`.
             instructions: Instructions to use for this agent, you can also register instructions via a function with
@@ -414,6 +436,13 @@ class CollabAgent:
         object.__setattr__(self, 'agent_handoffs', ensure_tuple(agent_handoffs))
         if name is None and agent.name is None:
             raise ValueError('Agent must have a name to participate in Collab')
+        if memory is not None:
+            if isinstance(memory, str):
+                memory = [memory]
+            if isinstance(memory, (list, tuple, set, frozenset)):
+                memory = {ctx: 'rw' for ctx in memory}
+            memory = {str_or_am_to_am(ctx): v for ctx, v in memory.items()}
+        object.__setattr__(self, 'memory', memory or {})
         object.__setattr__(self, 'name', name or agent.name)
 
     def __hash__(self) -> int:
@@ -482,6 +511,7 @@ class PromptBuilderContext:
     called_as_tool: bool
     ascii_topology: str | None = None
     can_do_parallel_agent_calls: bool = True
+    context_info: dict[AgentMemory, list[str]] = field(default_factory=dict)
 
 
 @dataclass(repr=False, kw_only=True)
