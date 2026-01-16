@@ -1,7 +1,8 @@
 # pydantic-collab
 
 [![PyPI version](https://img.shields.io/pypi/v/pydantic-collab)](https://pypi.org/project/pydantic-collab/)
-[![License](https://img.shields.io/pypi/l/pydantic-collab)](https://github.com/YOUR_USERNAME/pydantic-collab/blob/main/LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/boazkatzir/pydantic-collab/ci.yml?label=tests)](https://github.com/boazkatzir/pydantic-collab/actions)
+[![License](https://img.shields.io/pypi/l/pydantic-collab)](https://github.com/boazkatzir/pydantic-collab/blob/main/LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
 A Multi-Agent-System framework built on [pydantic-ai](https://ai.pydantic.dev/).
