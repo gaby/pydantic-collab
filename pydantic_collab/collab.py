@@ -155,9 +155,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
     _handoff_model: type[HandOffBase[Any]] | None | None = field(default=None, init=False, repr=False)
     _allow_parallel_agent_calls: bool = field(default=True, init=False, repr=False)
 
-    # Memory
-    _memory_objects: dict[AgentMemory, list[str]] = field(init=False, default_factory=dict, repr=False)
-
     def __init__(
         self,
         agents: t_seq_or_one[CollabAgent | tuple[AbstractAgent, str | None]],
@@ -211,8 +208,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             instrument_logfire: Whether to instruments Logfire. If true, logfire will be used if it can be imported and
                 has *already* been configured.
         """
-        # Those objects are there to store memory between or in Agents.
-        self._memory_objects: dict[AgentMemory, list[str]] = defaultdict(list)
         self._logger = None
         self._name_to_agent = {}
         self._instrument_logfire = instrument_logfire
@@ -759,7 +754,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         if tool_agents:
             tool_calls.append(self._get_agent_call_tool(c_agent, state, max_agent_calls_depths_allowed, deps))
         for agent_mem, perms in c_agent.memory.items():
-            memory_object = memory_info_by_obj[agent_mem] = self._memory_objects[agent_mem]
+            memory_object = memory_info_by_obj[agent_mem] = state.memory_objects[agent_mem]
             if 'w' in perms:
                 tool_calls.append(self._get_add_to_memory_tool(agent_mem, memory_object))
 
@@ -837,9 +832,6 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         else:
             span = None
 
-        # The memory is reset for each run right now
-        # TODO: make it dynamic per user's with
-        self._memory_objects = defaultdict(list)
         try:
             deps_parsed: dict[t_agent_name, AgentDepsT] = {}
             if isinstance(deps, dict):

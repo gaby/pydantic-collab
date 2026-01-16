@@ -6,7 +6,7 @@ history, and extracting tool calls. Users should not import from this module dir
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic_ai import (
     BaseToolCallPart,
@@ -19,7 +19,7 @@ from pydantic_ai import (
 )
 
 if TYPE_CHECKING:
-    from ._types import AgentMemory, HandoffData, PromptBuilderContext, T
+    from ._types import HandoffData, PromptBuilderContext, T
 
 # =============================================================================
 # Message History Utilities
@@ -300,15 +300,3 @@ def ensure_tuple(value: T) -> tuple[T] | T | None:
     elif isinstance(value, (list, set, frozenset)):
         return tuple(value)
     return (value,)
-
-
-def str_or_am_to_am(mem: AgentMemory | str) -> AgentMemory:
-    if isinstance(mem, str):
-        return AgentMemory(name=mem)
-    return mem
-
-
-def validate_r_rw(r_or_rw: str) -> Literal['r', 'rw']:
-    if r_or_rw not in ('r', 'rw'):
-        raise RuntimeError(f'Value needs to be either r or rw - got {r_or_rw}')
-    return r_or_rw

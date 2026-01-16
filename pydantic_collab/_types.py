@@ -7,6 +7,7 @@ used internally by the Collab orchestrator. Users should not import from this mo
 from __future__ import annotations
 
 import copy
+from collections import defaultdict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -32,7 +33,7 @@ from pydantic_ai.output import OutputSpec
 from pydantic_ai.tools import BuiltinToolFunc, ToolFuncEither, ToolsPrepareFunc
 from typing_extensions import TypeAliasType
 
-from pydantic_collab._utils import ensure_tuple, str_or_am_to_am, validate_r_rw
+from pydantic_collab._utils import ensure_tuple
 
 T = TypeVar('T')
 # =============================================================================
@@ -108,6 +109,8 @@ class CollabState:
     execution_path: list[str] = field(default_factory=lambda: cast(list[str], []))
     execution_history: list[dict[str, Any]] = field(default_factory=lambda: cast(list[dict[str, Any]], []))
     messages: list[AgentRunSummary] = field(default_factory=lambda: cast(list[AgentRunSummary], []))
+    memory_objects: dict[AgentMemory, list[str]] = field(default_factory=lambda: defaultdict(list))
+    """Used to store memory between or in agent"""
 
     def get_context(self, agent_name: str) -> AgentContext:
         """Get or create context for an agent."""
@@ -220,6 +223,20 @@ class AgentMemory:
     """The name of this memory"""
     description: str | None = None
     """LLM-readable description of this memory and when to use it."""
+
+
+def str_or_am_to_am(mem: AgentMemory | str) -> AgentMemory:
+    """Convert a string or AgentMemory to AgentMemory."""
+    if isinstance(mem, str):
+        return AgentMemory(name=mem)
+    return mem
+
+
+def validate_r_rw(r_or_rw: str) -> Literal['r', 'rw']:
+    """Validate that permission is 'r' or 'rw'."""
+    if r_or_rw not in ('r', 'rw'):
+        raise RuntimeError(f'Value needs to be either r or rw - got {r_or_rw}')
+    return r_or_rw
 
 
 # =============================================================================
