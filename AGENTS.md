@@ -147,7 +147,7 @@ agent_collab_poc/
 
 ### Optional Integrations
 - **`logfire`** – Observability; only active if previously configured.
-- **Visualization stack (`graphviz`, `matplotlib`, `networkx`)** – Enables `swarm.visualize_topology()` to render PNG/SVG graphs.
+- **Visualization stack (`graphviz`, `matplotlib`, `networkx`)** – Enables `collab.visualize_topology()` to render PNG/SVG graphs.
 
 ### Environment Variables
 ```bash

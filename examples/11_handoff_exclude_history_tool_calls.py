@@ -8,7 +8,6 @@ import os
 
 import logfire
 from example_tools import search_tool
-from pydantic_ai import Agent
 
 from pydantic_collab import CollabAgent, PipelineCollab
 
@@ -28,23 +27,20 @@ else:
 
 
 def create_swarm():
-    front = Agent(
-        MODEL,
-        name='Front',
-        system_prompt=(
-            'You are the Front agent. If you need more backend analysis, call the builtin tool `fake_search` '
-            "with the query, then return a HandoffOutput to the agent named 'Back'. "
-            'When handing off, set include_conversation=False and include_tool_calls_with=True so the Back agent '
-            "only receives the previous tool call traces. Be explicit: next_agent must be 'Back'."
-        ),
-    )
-    back = Agent(MODEL, name='Back', system_prompt='You are a backend analyst, only needs tool traces.')
-
     swarm = PipelineCollab(
         agents=[
             # Do not register agent_calls — we want Front to call the builtin function tool only.
-            CollabAgent(agent=front, description='Front'),
-            CollabAgent(agent=back, description='Back'),
+            CollabAgent(
+                MODEL,
+                name='Front',
+                system_prompt=(
+                    'You are the Front agent. If you need more backend analysis, call the builtin tool `fake_search` '
+                    "with the query, then return a HandoffOutput to the agent named 'Back'. "
+                    'When handing off, set include_conversation=False and include_tool_calls_with=True so the Back agent '
+                    "only receives the previous tool call traces. Be explicit: next_agent must be 'Back'."
+                ),
+            ),
+            CollabAgent(MODEL, name='Back', system_prompt='You are a backend analyst, only needs tool traces.'),
         ],
         max_handoffs=3,
         tools=search_tool,

@@ -3,6 +3,7 @@
 This module contains implementation details for rendering agent network topologies
 using matplotlib and networkx. It is lazily imported only when visualization is needed.
 """
+
 from collections.abc import Collection, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
@@ -67,7 +68,7 @@ def render_topology(
     except ImportError as e:
         raise ImportError(
             "Visualization requires 'networkx' and 'matplotlib'. "
-            "Install with: pip install pydantic_collab[viz] or uv add \"pydantic_collab[viz]\"."
+            'Install with: pip install pydantic_collab[viz] or uv add "pydantic_collab[viz]".'
         ) from e
 
     # Collect edges
@@ -81,8 +82,7 @@ def render_topology(
 
     fig, ax = plt.subplots(figsize=figsize, facecolor='white')
     if not agents:
-        ax.text(0.5, 0.5, 'No agents in collab', ha='center', va='center',
-               transform=ax.transAxes, fontsize=14)
+        ax.text(0.5, 0.5, 'No agents in collab', ha='center', va='center', transform=ax.transAxes, fontsize=14)
         ax.axis('off')
         return fig
 
@@ -102,9 +102,20 @@ def render_topology(
         perp = np.array([-direction[1], direction[0]])
         start_pt = start + perp * offset + direction * (node_radius + 0.02)
         end_pt = end + perp * offset - direction * (node_radius + 0.05)
-        ax.annotate('', xy=tuple(end_pt), xytext=tuple(start_pt),
-                   arrowprops=dict(arrowstyle='<->' if bidirectional else '->', color=color,
-                                  lw=lw, linestyle=linestyle, mutation_scale=20, alpha=0.8), zorder=1)
+        ax.annotate(
+            '',
+            xy=tuple(end_pt),
+            xytext=tuple(start_pt),
+            arrowprops=dict(
+                arrowstyle='<->' if bidirectional else '->',
+                color=color,
+                lw=lw,
+                linestyle=linestyle,
+                mutation_scale=20,
+                alpha=0.8,
+            ),
+            zorder=1,
+        )
 
     drawn_tools: set[tuple[str, str]] = set()
     drawn_handoffs: set[tuple[str, str]] = set()
@@ -131,28 +142,50 @@ def render_topology(
 
     # Draw nodes
     node_colors = {
-        (True, True): NODE_COLOR_BOTH, (True, False): NODE_COLOR_START,
-        (False, True): NODE_COLOR_FINAL, (False, False): NODE_COLOR_OTHER
+        (True, True): NODE_COLOR_BOTH,
+        (True, False): NODE_COLOR_START,
+        (False, True): NODE_COLOR_FINAL,
+        (False, False): NODE_COLOR_OTHER,
     }
     for agent in agents:
         x, y = pos[agent.name]
         is_start = agent == starting_agent
         is_final = agent == final_agent
         color = node_colors[(is_start, is_final)]
-        ax.add_patch(mpatches.Circle((x, y), node_radius, facecolor=color, edgecolor='black',
-                                    linewidth=2.5, zorder=10, alpha=0.9))
-        ax.text(x, y, agent.name, ha='center', va='center', fontsize=font_size, fontweight='bold',
-               zorder=11, bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.7))
+        ax.add_patch(
+            mpatches.Circle(
+                (x, y), node_radius, facecolor=color, edgecolor='black', linewidth=2.5, zorder=10, alpha=0.9
+            )
+        )
+        ax.text(
+            x,
+            y,
+            agent.name,
+            ha='center',
+            va='center',
+            fontsize=font_size,
+            fontweight='bold',
+            zorder=11,
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.7),
+        )
 
     # Legend and finalize
-    ax.legend(handles=[
-        mpatches.Patch(facecolor=NODE_COLOR_START, edgecolor='black', linewidth=1.5, label='Start'),
-        mpatches.Patch(facecolor=NODE_COLOR_FINAL, edgecolor='black', linewidth=1.5, label='Final'),
-        mpatches.Patch(facecolor=NODE_COLOR_BOTH, edgecolor='black', linewidth=1.5, label='Start & Final'),
-        mpatches.Patch(facecolor=NODE_COLOR_OTHER, edgecolor='black', linewidth=1.5, label='Other'),
-        Line2D([0], [0], color=TOOL_EDGE_COLOR, linestyle='--', lw=2.5, label='Tool Call (→ or ↔)'),
-        Line2D([0], [0], color=HANDOFF_EDGE_COLOR, linestyle='-', lw=3, label='Handoff (→ or ↔)'),
-    ], loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=10, framealpha=0.95, edgecolor='gray', fancybox=True)
+    ax.legend(
+        handles=[
+            mpatches.Patch(facecolor=NODE_COLOR_START, edgecolor='black', linewidth=1.5, label='Start'),
+            mpatches.Patch(facecolor=NODE_COLOR_FINAL, edgecolor='black', linewidth=1.5, label='Final'),
+            mpatches.Patch(facecolor=NODE_COLOR_BOTH, edgecolor='black', linewidth=1.5, label='Start & Final'),
+            mpatches.Patch(facecolor=NODE_COLOR_OTHER, edgecolor='black', linewidth=1.5, label='Other'),
+            Line2D([0], [0], color=TOOL_EDGE_COLOR, linestyle='--', lw=2.5, label='Tool Call (→ or ↔)'),
+            Line2D([0], [0], color=HANDOFF_EDGE_COLOR, linestyle='-', lw=3, label='Handoff (→ or ↔)'),
+        ],
+        loc='upper left',
+        bbox_to_anchor=(1.02, 1),
+        fontsize=10,
+        framealpha=0.95,
+        edgecolor='gray',
+        fancybox=True,
+    )
 
     if len(positions_array) > 0:
         x_min, x_max = positions_array[:, 0].min(), positions_array[:, 0].max()
@@ -171,52 +204,56 @@ def render_topology(
 
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white', edgecolor='none')
-    
+
     # Automatically show the plot in a window (like matplotlib's .plot())
     if show:
         plt.show()
-    
+
     return fig
 
 
 def _compute_layout(G: Any, agents: Sequence['CollabAgent']) -> dict[str, Any]:
     """Compute node positions using best available layout algorithm."""
     import networkx as nx
-    
+
     num_nodes = len(agents)
     k = max(1.5, 3.0 / np.sqrt(num_nodes))
-    
+
     for layout_func in [
         lambda: nx.spring_layout(G, k=k, iterations=200, seed=42),
-        lambda: nx.spring_layout(G, k=k*1.2, iterations=300, seed=42),
+        lambda: nx.spring_layout(G, k=k * 1.2, iterations=300, seed=42),
         lambda: nx.circular_layout(G),
     ]:
         try:
             pos = layout_func()
             positions = np.array(list(pos.values()))
             if len(positions) > 1:
-                min_dist = np.min([np.linalg.norm(positions[i] - positions[j]) 
-                                 for i in range(len(positions)) 
-                                 for j in range(i+1, len(positions))])
+                min_dist = np.min(
+                    [
+                        np.linalg.norm(positions[i] - positions[j])
+                        for i in range(len(positions))
+                        for j in range(i + 1, len(positions))
+                    ]
+                )
                 if min_dist > 0.3:
                     return pos
         except Exception:
             continue
-    
+
     return nx.spring_layout(G, k=k, iterations=200, seed=42)
 
 
 def _compute_node_sizing(positions_array: Any, num_nodes: int) -> tuple[float, int]:
-    """Calculate adaptive node radius and font size."""        
+    """Calculate adaptive node radius and font size."""
     if len(positions_array) > 1:
         max_range = max(
             positions_array[:, 0].max() - positions_array[:, 0].min(),
             positions_array[:, 1].max() - positions_array[:, 1].min(),
-            1.0
+            1.0,
         )
         node_radius = max(0.15, min(0.4, max_range * 0.08))
     else:
         node_radius = 0.25
-    
+
     font_size = max(8, min(12, int(14 - num_nodes * 0.5)))
     return node_radius, font_size

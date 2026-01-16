@@ -49,7 +49,9 @@ from pydantic_ai.tools import (
 
 # SystemPromptFunc not used directly here; avoid unused import
 from ._types import (
+    MAXIMUM_MEM_LINE_LENGTH,
     AgentDepsT,
+    AgentMemory,
     AgentRunSummary,
     CollabAgent,
     CollabError,
@@ -60,13 +62,12 @@ from ._types import (
     HandoffData,
     OutputDataT,
     PromptBuilderContext,
-    ensure_tuple,
-    get_right_handoff_model,
+    generate_handoff_pydantic_model,
     t_agent_desc,
     t_agent_name,
     t_seq_or_one,
 )
-from ._utils import default_build_agent_prompt, get_context
+from ._utils import default_build_agent_prompt, ensure_tuple, get_context
 
 if TYPE_CHECKING:
     try:
@@ -273,7 +274,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         self._enter_lock = Lock()
         self._entered_count = 0
         self._exit_stack = None
-        self._handoff_model = get_right_handoff_model(self._collab_settings)
+        self._handoff_model = generate_handoff_pydantic_model(self._collab_settings)
         # Build internal structures
         self._build_topology()
 
@@ -724,6 +725,9 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             max_agent_calls_depths_allowed = self.max_agent_call_depth
         if deps is None:
             deps = {}
+
+        tool_calls = []
+        memory_info_by_obj: dict[AgentMemory, list[str]] = {}
         # Determine c_agent capabilities
         is_final = self._is_final_agent(c_agent)
 
@@ -746,6 +750,19 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             topology = self.get_topology_ascii()
         else:
             topology = None
+        toolsets = (*self._toolsets, *self._dynamic_toolsets, self._toolset_by_agent[c_agent])
+        if tool_agents:
+            tool_calls.append(self._get_agent_call_tool(c_agent, state, max_agent_calls_depths_allowed, deps))
+        for agent_mem, perms in c_agent.memory.items():
+            memory_object = memory_info_by_obj[agent_mem] = state.memory_objects[agent_mem]
+            if 'w' in perms:
+                tool_calls.append(self._get_add_to_memory_tool(agent_mem, memory_object))
+
+        if tool_calls:
+            toolsets = (*toolsets, FunctionToolset(tool_calls))
+
+        self._already_handed_off.add(c_agent)
+
         # Build prompt using the configurable prompt builder
         prompt_ctx = PromptBuilderContext(
             agent=c_agent,
@@ -755,16 +772,11 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             tool_agents=tool_agents,
             called_as_tool=is_tool_run,
             ascii_topology=topology,
+            context_info=memory_info_by_obj,
         )
         prompt_builder = self._collab_settings.prompt_builder or default_build_agent_prompt
         info_about_agents = prompt_builder(prompt_ctx)
         user_prompt = f'{info_about_agents}\n\n{context_from_handoff or ""}'.strip() + f'\n\n# Query: {query}'
-        toolsets = (*self._toolsets, *self._dynamic_toolsets, self._toolset_by_agent[c_agent])
-        if tool_agents:
-            tool_call = self._get_agent_call_tool(c_agent, state, max_agent_calls_depths_allowed, deps)
-            toolsets = (*toolsets, FunctionToolset((tool_call,)))
-
-        self._already_handed_off.add(c_agent)
 
         # Run the c_agent with the constrained output type, check time it takes to run
         start_time = datetime.datetime.now()
@@ -819,6 +831,7 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             span = self._logfire.span(f'{self.name or "Agent"} Collab Run').__enter__()
         else:
             span = None
+
         try:
             deps_parsed: dict[t_agent_name, AgentDepsT] = {}
             if isinstance(deps, dict):
@@ -932,6 +945,43 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             our_handoff_model = self._get_explicit_handoff_model(handoff_agents)
             return our_handoff_model[inner_type]
         return inner_type
+
+    def _get_add_to_memory_tool(self, agent_mem: AgentMemory, context: list[str]) -> Tool:
+        """This function is used to get the tool that is used to use agent calls between agents.
+
+        Args:
+            agent_mem: The memory artifact to use
+            context: The context to use.
+
+        Returns:
+            Tool: The tool that is used to use agent calls between agents
+        """
+
+        # Doesn't need to be async but pydantic-ai prefers it that way
+        async def add_to_memory(ctx: RunContext[AgentDepsT], info: str) -> None | str:
+            # I get ctx here because we're gonna need it for later probably
+            if len(info) == 0:
+                return "Info can't be empty."
+            if len(info) > MAXIMUM_MEM_LINE_LENGTH:
+                return (
+                    f"Info can't be longer than {MAXIMUM_MEM_LINE_LENGTH}. Data won't be added, call again with "
+                    'less data'
+                )
+            context.append(info)
+            return None
+
+        documentation = f"""Add more information to the memory of {agent_mem.name}.
+
+            Args:
+                info: String of the information to add. Maximum length is {MAXIMUM_MEM_LINE_LENGTH} 
+
+            Returns:
+                None or string if an error occurred
+            """
+        add_to_memory_tool = Tool(
+            add_to_memory, takes_ctx=True, description=documentation, name=f'add_to_{agent_mem.name}_mem'
+        )
+        return add_to_memory_tool
 
     def _get_agent_call_tool(
         self,

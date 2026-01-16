@@ -15,8 +15,10 @@ from pydantic_collab._types import (
     HandOffBase,
     HandoffData,
     PromptBuilderContext,
+    generate_handoff_pydantic_model,
+)
+from pydantic_collab._utils import (
     ensure_tuple,
-    get_right_handoff_model,
 )
 
 
@@ -66,7 +68,7 @@ class TestGetRightHandoffModel:
 
     def test_default_settings_creates_allow_fields(self):
         settings = CollabSettings()
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         # Check model can be instantiated
         instance = Model(next_agent='TestAgent', query='Test query')
@@ -81,7 +83,7 @@ class TestGetRightHandoffModel:
 
     def test_force_conversation_creates_classvar(self):
         settings = CollabSettings(include_conversation='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         # When forced, it's a ClassVar set to True
@@ -89,7 +91,7 @@ class TestGetRightHandoffModel:
 
     def test_disallow_conversation_creates_classvar(self):
         settings = CollabSettings(include_conversation='disallow')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         # When disallowed, it's a ClassVar set to False
@@ -97,28 +99,28 @@ class TestGetRightHandoffModel:
 
     def test_force_thinking_creates_classvar(self):
         settings = CollabSettings(include_thinking='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is True
 
     def test_disallow_thinking_creates_classvar(self):
         settings = CollabSettings(include_thinking='disallow')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is False
 
     def test_force_handoff_creates_classvar(self):
         settings = CollabSettings(include_handoff='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_previous_handoff is True
 
     def test_force_tool_calls_creates_classvar(self):
         settings = CollabSettings(include_tool_calls_with_callee='force')
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_tool_calls_with_callee is True
@@ -130,7 +132,7 @@ class TestGetRightHandoffModel:
             include_handoff='force',
             include_tool_calls_with_callee='force',
         )
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is True
@@ -145,7 +147,7 @@ class TestGetRightHandoffModel:
             include_handoff='disallow',
             include_tool_calls_with_callee='disallow',
         )
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is False
@@ -155,13 +157,13 @@ class TestGetRightHandoffModel:
 
     def test_model_is_subclass_of_handoff_base(self):
         settings = CollabSettings()
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         assert issubclass(Model, HandOffBase)
 
     def test_model_with_reasoning(self):
         settings = CollabSettings()
-        Model = get_right_handoff_model(settings)
+        Model = generate_handoff_pydantic_model(settings)
 
         instance = Model(
             next_agent='TestAgent', query='Test query', reasoning='Because reasons'
@@ -523,3 +525,67 @@ class TestAgentRunSummary:
     def test_messages_default_empty(self):
         summary = AgentRunSummary(agent_name='Test')
         assert summary.messages == []
+
+
+class TestCollabAgentCreatesAgent:
+    """Tests for CollabAgent creating an Agent when agent parameter is None."""
+
+    def test_creates_agent_with_basic_parameters(self):
+        """Test that CollabAgent creates an Agent with basic model and name parameters."""
+        collab_agent = CollabAgent(model='test', name='TestAgent', description='Test description')
+        direct_agent = Agent('test', name='TestAgent')
+
+        # Compare key attributes
+        assert collab_agent.agent.name == direct_agent.name
+        assert collab_agent.agent.model == direct_agent.model
+        assert collab_agent.name == 'TestAgent'
+
+    def test_creates_agent_with_output_type_and_instructions(self):
+        """Test that CollabAgent creates an Agent with output_type and instructions."""
+        def custom_instructions(ctx):
+            return "Custom instructions"
+
+        collab_agent = CollabAgent(
+            model='test',
+            name='InstructAgent',
+            output_type=str,
+            instructions=custom_instructions,
+            description='Agent with instructions'
+        )
+        direct_agent = Agent(
+            'test',
+            name='InstructAgent',
+            output_type=str,
+            instructions=custom_instructions
+        )
+
+        # Compare key attributes
+        assert collab_agent.agent.name == direct_agent.name
+        assert collab_agent.agent.model == direct_agent.model
+        assert collab_agent.agent._output_type == direct_agent._output_type
+
+    def test_creates_agent_with_system_prompt_and_deps_type(self):
+        """Test that CollabAgent creates an Agent with system_prompt and deps_type."""
+        system_prompts = ["You are a helpful assistant", "Always be concise"]
+
+        class MyDeps:
+            value: str = "test"
+
+        collab_agent = CollabAgent(
+            model='test',
+            name='PromptAgent',
+            system_prompt=system_prompts,
+            deps_type=MyDeps,
+            description='Agent with system prompt'
+        )
+        direct_agent = Agent(
+            'test',
+            name='PromptAgent',
+            system_prompt=system_prompts,
+            deps_type=MyDeps
+        )
+
+        # Compare key attributes
+        assert collab_agent.agent.name == direct_agent.name
+        assert collab_agent.agent.model == direct_agent.model
+        assert collab_agent.agent.deps_type == direct_agent.deps_type

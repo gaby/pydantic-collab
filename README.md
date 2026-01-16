@@ -1,5 +1,10 @@
 # pydantic-collab
 
+[![PyPI version](https://img.shields.io/pypi/v/pydantic-collab)](https://pypi.org/project/pydantic-collab/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/boazkatzir/pydantic-collab/ci.yml?label=tests)](https://github.com/boazkatzir/pydantic-collab/actions)
+[![License](https://img.shields.io/pypi/l/pydantic-collab)](https://github.com/boazkatzir/pydantic-collab/blob/main/LICENSE)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
 A Multi-Agent-System framework built on [pydantic-ai](https://ai.pydantic.dev/).
 
 ## Installation
@@ -13,20 +18,22 @@ pip install pydantic-collab
 Define agent topologies through custom or pre-build topologies. Agents communicate through *tool calls* (synchronous consultation) or *handoffs* (transfer of control).
 
 ```python
-from pydantic_ai import Agent
+from pydantic_collab import PipelineCollab, CollabAgent
 from pydantic_ai.builtin_tools import WebSearchTool
-from pydantic_collab import PipelineCollab
 
-intake = Agent(name="Intake", system_prompt="Summarize requests and relevant data from the internet",
-               builtin_tools=[WebSearchTool()])
-reporter = Agent(name="Reporter", system_prompt="Create final response")
-
-swarm = PipelineCollab(
-    agents=[(intake, "Intake agent"), (reporter, "Reporter agent")],
+collab = PipelineCollab(
+    agents=[
+        CollabAgent(
+            name="Intake",
+            system_prompt="Summarize requests and relevant data from the internet",
+            builtin_tools=[WebSearchTool()],
+        ),
+        CollabAgent(name="Reporter", system_prompt="Create final response"),
+    ],
     model="openai:gpt-5.2"
 )
 
-result = swarm.run_sync("Plan a birthday party for a celebrity that was born today")
+result = collab.run_sync("Plan a birthday party for a celebrity that was born today")
 print(result.output)
 ```
 
@@ -58,14 +65,13 @@ Use when an agent's part is done and control should transfer:
 ### Forward Chain Pipeline
 
 ```python
-from pydantic_ai import Agent
-from pydantic_collab import PipelineCollab
+from pydantic_collab import PipelineCollab, CollabAgent
 
-swarm = PipelineCollab(
+collab = PipelineCollab(
     agents=[
-        (Agent(name="Intake", system_prompt="Summarize and hand off"), "Intake"),
-        (Agent(name="Analyst", system_prompt="Analyze and hand off"), "Analyst"),
-        (Agent(name="Reporter", system_prompt="Create final response"), "Reporter"),
+        CollabAgent(name="Intake", system_prompt="Summarize and hand off"),
+        CollabAgent(name="Analyst", system_prompt="Analyze and hand off"),
+        CollabAgent(name="Reporter", system_prompt="Create final response"),
     ],
     model="openai:gpt-4o-mini",
 )
@@ -74,14 +80,13 @@ swarm = PipelineCollab(
 ### Star Topology
 
 ```python
-from pydantic_ai import Agent
-from pydantic_collab import StarCollab
+from pydantic_collab import StarCollab, CollabAgent
 
-swarm = StarCollab(
+collab = StarCollab(
     agents=[
-        (Agent(name="Coordinator", system_prompt="Route to specialists"), "Coordinator"),
-        (Agent(name="L1Support", system_prompt="Handle simple issues"), "L1"),
-        (Agent(name="L2Support", system_prompt="Handle complex issues"), "L2"),
+        CollabAgent(name="Coordinator", system_prompt="Route to specialists"),
+        CollabAgent(name="L1Support", system_prompt="Handle simple issues"),
+        CollabAgent(name="L2Support", system_prompt="Handle complex issues"),
     ],
     model="openai:gpt-4o-mini",
 )
@@ -90,14 +95,13 @@ swarm = StarCollab(
 ### Mesh Network
 
 ```python
-from pydantic_ai import Agent
-from pydantic_collab import MeshCollab
+from pydantic_collab import MeshCollab, CollabAgent
 
-swarm = MeshCollab(
+collab = MeshCollab(
     agents=[
-        (Agent(name="Strategist", system_prompt="Business strategy"), "Strategy"),
-        (Agent(name="Technologist", system_prompt="Technical feasibility"), "Tech"),
-        (Agent(name="Designer", system_prompt="User experience"), "Design"),
+        CollabAgent(name="Strategist", system_prompt="Business strategy"),
+        CollabAgent(name="Technologist", system_prompt="Technical feasibility"),
+        CollabAgent(name="Designer", system_prompt="User experience"),
     ],
     model="openai:gemini-2.5-pro",
 )
@@ -109,44 +113,88 @@ Define explicit tool calls and handoffs:
 
 ```python
 from pydantic_collab import Collab, CollabAgent
-from pydantic_ai import Agent
 
-swarm = Collab(
+collab = Collab(
     agents=[
         CollabAgent(
-            agent=Agent(name="Router", system_prompt="Route requests"),
-            description="Routes requests",
+            name="Router",
+            system_prompt="Route requests",
             agent_calls="Researcher",  # Can call as tool
             agent_handoffs="Writer",  # Can transfer control
         ),
+        CollabAgent(name="Researcher", system_prompt="Research topics"),
         CollabAgent(
-            agent=Agent(name="Researcher", system_prompt="Research topics"),
-            description="Researches topics",
-        ),
-        CollabAgent(
-            agent=Agent(name="Writer", system_prompt="Write content"),
-            description="Writes content",
+            name="Writer",
+            system_prompt="Write content",
             agent_handoffs="Editor",
         ),
-        CollabAgent(
-            agent=Agent(name="Editor", system_prompt="Final editing"),
-            description="Final editing",
-        ),
+        CollabAgent(name="Editor", system_prompt="Final editing"),
     ],
     model="anthropic:claude-sonnet-4-5",
     final_agent="Editor",
 )
 ```
 
+## Agent Memory
+
+Share persistent context between agents during a run. Memory is useful for accumulating knowledge, conventions, or decisions that multiple agents need to access.
+
+Each memory has a permission level:
+- `'r'` – read-only (injected into the agent's prompt)
+- `'rw'` – read-write (agent also gets a tool to append data)
+
+```python
+from pydantic_collab import PipelineCollab, CollabAgent, AgentMemory
+
+# Define a shared memory for code architecture decisions
+arch_memory = AgentMemory(
+    name="architecture",
+    description="Code architecture decisions and conventions for this project"
+)
+
+collab = PipelineCollab(
+    agents=[
+        CollabAgent(
+            name="Architect",
+            system_prompt="Analyze the codebase and document architecture decisions",
+            memory={arch_memory: "rw"},  # Can read and write
+        ),
+        CollabAgent(
+            name="Developer",
+            system_prompt="Implement features following the documented conventions",
+            memory={arch_memory: "r"},  # Read-only access
+        ),
+    ],
+    model="openai:gpt-4o",
+)
+
+result = collab.run_sync("Add a new API endpoint for user preferences")
+```
+
+In this example, the Architect agent analyzes the codebase and writes conventions to memory (e.g., "Use dependency injection for services", "Follow REST naming conventions"). The Developer agent sees these conventions in its prompt and follows them when implementing.
+
+Memory can also be declared with just names for quick setup:
+
+```python
+# Simple string syntax (defaults to 'rw')
+CollabAgent(name="Agent", memory="notes")
+
+# List syntax (all default to 'rw')
+CollabAgent(name="Agent", memory=["notes", "decisions"])
+
+# Dict syntax for explicit permissions
+CollabAgent(name="Agent", memory={"notes": "rw", "config": "r"})
+```
+
 ## Visualizing Topology
 
 Visualize your agent topology as a graph.
 ```python
-swarm = Collab(...)
+collab = Collab(...)
 # Automatically opens image in a window (default behavior)
-swarm.visualize_topology()
+collab.visualize_topology()
 # Or save to file
-swarm.visualize_topology(save_path="topology.png", show=False)
+collab.visualize_topology(save_path="topology.png", show=False)
 ```
 
 **Installation:** Requires visualization dependencies:
@@ -161,9 +209,9 @@ pip install pydantic-collab[viz]
 ### Custom Tools for All Agents
 
 ```python
-swarm = Collab(agents=[...], model="openai:gpt-4o-mini")
+collab = Collab(agents=[...], model="openai:gpt-4o-mini")
 
-@swarm.tool_plain
+@collab.tool_plain
 async def power(num1: int, num2: int) -> int:
     """Returns num1 powered by num2"""
     return num1 ** num2
@@ -172,13 +220,13 @@ async def power(num1: int, num2: int) -> int:
 ### Custom Tools for Specific Agents
 
 ```python
-@swarm.tool_plain(agents=("Researcher", "Analyst"))
+@collab.tool_plain(agents=("Researcher", "Analyst"))
 async def fetch_data(url: str) -> str:
     """Fetch data from URL."""
     return f"Data from {url}"
 
 
-@swarm.tool(agents=("Writer",))
+@collab.tool(agents=("Writer",))
 async def save_draft(ctx: RunContext[MyDeps], content: str) -> str:
     """Save draft."""
     await ctx._deps.storage.save(content)
@@ -188,9 +236,9 @@ async def save_draft(ctx: RunContext[MyDeps], content: str) -> str:
 ## Result Object
 
 ```python
-result = await swarm.run("Query")
+result = await collab.run("Query")
 # or
-result = swarm.run_sync("Query")
+result = collab.run_sync("Query")
 
 result.output              # Final output
 result.final_agent         # Agent that produced output
@@ -208,7 +256,7 @@ print(result.print_execution_flow())  # Visual flow diagram
 ### Execution Limits
 
 ```python
-swarm = Collab(
+collab = Collab(
     agents=[...],
     max_handoffs=10,              # Maximum handoff iterations (default: 10)
     max_agent_call_depth=3,       # Maximum recursive tool call depth (default: 3)
@@ -226,9 +274,9 @@ Most settings accept three values:
 ```python
 from pydantic_collab import CollabSettings
 
-swarm = Collab(
+collab = Collab(
     agents=[...],
-    swarm_settings=CollabSettings(
+    collab_settings=CollabSettings(
         include_conversation="allow",  # 
         include_thinking="disallow",  # Include thinking/reasoning parts
         include_handoff="allow",  # Accumulate previous handoff context
@@ -252,7 +300,7 @@ def my_prompt_builder(ctx: PromptBuilderContext) -> str:
     return "\n".join(lines)
 
 
-swarm = Collab(
+collab = Collab(
     agents=[...],
     collab_settings=CollabSettings(prompt_builder=my_prompt_builder),
 )
@@ -271,9 +319,9 @@ def my_context_builder(data: HandoffData) -> str:
     return "\n".join(parts)
 
 
-swarm = Collab(
+collab = Collab(
     agents=[...],
-    swarm_settings=CollabSettings(context_builder=my_context_builder),
+    collab_settings=CollabSettings(context_builder=my_context_builder),
 )
 ```
 
@@ -286,10 +334,10 @@ class MyDeps(BaseModel):
     db: Database
     cache: Cache
 
-swarm = Collab(
+collab = Collab(
     agents=[...],
 )
-result = swarm.run_sync("...", deps=MyDeps(db=db, cache=cache))
+result = collab.run_sync("...", deps=MyDeps(db=db, cache=cache))
 ```
 
 ## Examples

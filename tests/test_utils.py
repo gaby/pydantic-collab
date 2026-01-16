@@ -17,10 +17,11 @@ from pydantic_ai.messages import (
 )
 
 from pydantic_collab import CollabAgent
-from pydantic_collab._types import HandoffData, PromptBuilderContext, ensure_tuple
+from pydantic_collab._types import HandoffData, PromptBuilderContext
 from pydantic_collab._utils import (
     PART_TO_STR,
     default_build_agent_prompt,
+    ensure_tuple,
     get_context,
     get_tool_calls,
     message_history_to_text,

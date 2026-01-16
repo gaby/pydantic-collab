@@ -19,7 +19,7 @@ from pydantic_ai import (
 )
 
 if TYPE_CHECKING:
-    from ._types import HandoffData, PromptBuilderContext
+    from ._types import HandoffData, PromptBuilderContext, T
 
 # =============================================================================
 # Message History Utilities
@@ -137,7 +137,7 @@ def get_context(handoff_data: HandoffData) -> str:
 # =============================================================================
 
 
-def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
+def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:  # noqa: C901
     """Build agent-specific instructions based on capabilities.
 
     Default prompt builder that describes available actions (handoffs, tool calls,
@@ -263,6 +263,40 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:
         )
         output_instructions.append('')
 
-    output_str = 's\n'.join(output_instructions)
+    if ctx.context_info:
+        output_instructions.append('---\n## Relevant Memories for Agent:\n')
+        for agent_mem, data in ctx.context_info.items():
+            # If it's not writable and there's no data, we shouldn't care about this memory
+            if not data and 'w' not in ctx.agent.memory[agent_mem]:
+                continue
+            output_instructions.append(f'## {agent_mem.name}')
+            if agent_mem.description:
+                output_instructions.append(f'Description: {agent_mem.description}')
+            if 'w' in ctx.agent.memory[agent_mem]:
+                output_instructions.append(f'You may also add to this context using add_to_{agent_mem.name}_mem.')
+            output_instructions.extend(['### Data:', *data, ''])
+        output_instructions.append('---')
+
+    output_str = '\n'.join(output_instructions)
 
     return output_str
+
+
+# For some reason tuple[Unpack[T]]  doesn't work in ruff
+def ensure_tuple(value: T) -> tuple[T] | T | None:
+    """Convert a value to a tuple, handling various input types.
+
+    Args:
+        value: Value to convert - can be None, tuple, list, set, frozenset, or single item
+
+    Returns:
+        None if value is None, the original tuple if already a tuple,
+        a tuple of the items if a collection, or a single-item tuple for other values
+    """
+    if value is None:
+        return None
+    if isinstance(value, tuple):
+        return value
+    elif isinstance(value, (list, set, frozenset)):
+        return tuple(value)
+    return (value,)
