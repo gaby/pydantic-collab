@@ -9,7 +9,7 @@ dynamic = [
 ]
 dependencies = [
     "pydantic>=2.12.5",
-    "pydantic_ai_slim>=1.43.0",
+    "pydantic_ai_slim>=1.47.0",
 ]
 [project.urls]
 Homepage = "https://github.com/boazkatzir/pydantic-collab"
@@ -25,16 +25,16 @@ path = "pydantic_collab/__init__.py"
 
 [project.optional-dependencies]
 viz = [
-    "graphviz>=0.20.3",
+    "graphviz>=0.21",
     "matplotlib>=3.10.8",
     "networkx>=3.6.1",
 ]
 logfire = [
-    "logfire>=4.19.0",
+    "logfire>=4.20.0",
 ]
 examples = [
-    "logfire>=4.16.0",
-    "pydantic_ai>=1.43.0",
+    "logfire>=4.20.0",
+    "pydantic_ai>=1.47.0",
     "opentelemetry-instrumentation-httpx>=0.60b1",
 ]
 [dependency-groups]
