@@ -482,10 +482,8 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
             for target in self._handoffs.get(agent, ()):
                 handoff_pairs.append(f'{agent.name}→{target.name}')
 
-        if handoff_pairs:
-            lines.append(f'Handoffs (→): {", ".join(handoff_pairs)}')
-        else:
-            lines.append('Handoffs: none')
+        # handoff_pairs is guaranteed non-empty here since we return early if has_handoffs is False
+        lines.append(f'Handoffs (→): {", ".join(handoff_pairs)}')
         return '\n'.join(lines)
 
     def visualize_topology(

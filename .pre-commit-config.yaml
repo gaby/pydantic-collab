@@ -9,9 +9,16 @@ repos:
       - id: ruff-format
   - repo: local
     hooks:
-      - id: pytest
-        name: pytest
-        entry: uv run pytest
+      - id: pytest-coverage
+        name: pytest with coverage (>99%)
+        entry: uv run coverage run -m pytest --tb=short -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: coverage-check
+        name: coverage check (>99%)
+        entry: uv run coverage report --fail-under=99 --omit="tests/*"
         language: system
         pass_filenames: false
         always_run: true

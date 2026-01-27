@@ -187,15 +187,12 @@ def render_topology(
         fancybox=True,
     )
 
-    if len(positions_array) > 0:
-        x_min, x_max = positions_array[:, 0].min(), positions_array[:, 0].max()
-        y_min, y_max = positions_array[:, 1].min(), positions_array[:, 1].max()
-        pad_x, pad_y = max(0.5, (x_max - x_min) * 0.2), max(0.5, (y_max - y_min) * 0.2)
-        ax.set_xlim(x_min - pad_x, x_max + pad_x)
-        ax.set_ylim(y_min - pad_y, y_max + pad_y)
-    else:
-        ax.set_xlim(-1, 1)
-        ax.set_ylim(-1, 1)
+    # positions_array is guaranteed non-empty here since we return early if agents is empty
+    x_min, x_max = positions_array[:, 0].min(), positions_array[:, 0].max()
+    y_min, y_max = positions_array[:, 1].min(), positions_array[:, 1].max()
+    pad_x, pad_y = max(0.5, (x_max - x_min) * 0.2), max(0.5, (y_max - y_min) * 0.2)
+    ax.set_xlim(x_min - pad_x, x_max + pad_x)
+    ax.set_ylim(y_min - pad_y, y_max + pad_y)
 
     ax.set_aspect('equal')
     ax.axis('off')

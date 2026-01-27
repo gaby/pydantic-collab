@@ -159,6 +159,11 @@ class TestMeshCollab:
         assert 'AgentA' not in collab.connections.get('AgentA', ())
         assert 'AgentB' not in collab.connections.get('AgentB', ())
 
+    def test_empty_agents_raises_error(self):
+        """Creating MeshCollab with no agents should raise error."""
+        with pytest.raises(CollabError, match='No agents'):
+            MeshCollab(agents=[])
+
 
 class TestPipelineCollab:
     """Tests for PipelineCollab (forward handoff chain)."""
@@ -240,6 +245,42 @@ class TestPipelineCollab:
 
         assert collab.has_handoffs
 
+    def test_explicit_final_agent_in_list(self, test_model):
+        """Test that explicit final_agent works when in agents list."""
+        agent_a = Agent(test_model, name='PipeA')
+        agent_b = Agent(test_model, name='PipeB')
+        agent_c = Agent(test_model, name='PipeC')
+
+        collab_a = CollabAgent(agent=agent_a, description='First')
+        collab_b = CollabAgent(agent=agent_b, description='Second')
+        collab_c = CollabAgent(agent=agent_c, description='Final')
+
+        collab = PipelineCollab(
+            agents=[collab_a, collab_b, collab_c],
+            final_agent=collab_c,
+        )
+
+        assert collab.final_agent.name == 'PipeC'
+        assert 'PipeC' in collab.agent_names
+
+    def test_final_agent_not_in_agents_gets_added(self, test_model):
+        """If final_agent is not in agents list, it should be added."""
+        agent_a = Agent(test_model, name='PipeAddA')
+        agent_b = Agent(test_model, name='PipeAddB')
+        agent_c = Agent(test_model, name='PipeAddC')
+
+        collab_a = CollabAgent(agent=agent_a, description='First')
+        collab_b = CollabAgent(agent=agent_b, description='Second')
+        collab_c = CollabAgent(agent=agent_c, description='Final')
+
+        collab = PipelineCollab(
+            agents=[collab_a, collab_b],
+            final_agent=collab_c,
+        )
+
+        assert collab.final_agent.name == 'PipeAddC'
+        assert 'PipeAddC' in collab.agent_names
+
 
 class TestHierarchyCollab:
     """Tests for HierarchyCollab (planner + orchestrator pattern)."""
@@ -284,6 +325,32 @@ class TestHierarchyCollab:
 
         # Check the orchestrator map was created
         assert len(collab._orchestrator_map) == 1
+
+    def test_orchestrator_with_tools(self, agent_a, agent_b, test_model):
+        """Orchestrators can have Tool instances in their list."""
+        from pydantic_ai import Tool
+
+        def my_tool(x: int) -> int:
+            """A tool."""
+            return x * 2
+
+        tool = Tool(my_tool, takes_ctx=False)
+
+        planner = CollabAgent(agent=agent_a, description='Planner')
+        orch_b = CollabAgent(agent=agent_b, description='Orchestrator B')
+
+        orchestrator_agents = {
+            orch_b: [tool],  # Tool instead of CollabAgent
+        }
+
+        collab = HierarchyCollab(
+            planner=planner, orchestrator_agents=orchestrator_agents
+        )
+
+        # Check the orchestrator map was created with the tool preserved
+        assert len(collab._orchestrator_map) == 1
+        # The tool should be preserved as-is in the normalized values
+        assert tool in collab._orchestrator_map[orch_b]
 
     def test_empty_orchestrators(self, agent_a):
         """HierarchyCollab can be created with empty orchestrator dict."""

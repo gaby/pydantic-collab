@@ -535,3 +535,36 @@ class TestPartToStrMapping:
 
     def test_text_part_maps_to_empty(self):
         assert PART_TO_STR[TextPart] == ''
+
+
+class TestMessageHistoryToTextInstructions:
+    """Tests for include_instructions parameter in message_history_to_text."""
+
+    def test_include_instructions_when_present(self):
+        """Instructions should be included when include_instructions=True."""
+        # Create a mock ModelRequest with instructions attribute
+        class MockRequestWithInstructions:
+            parts = [UserPromptPart(content='User message')]
+            instructions = ['Instruction 1', 'Instruction 2']
+
+        history = [
+            ModelRequest(parts=[UserPromptPart(content='First')]),
+            MockRequestWithInstructions(),
+        ]
+        result = message_history_to_text(history, include_instructions=True)
+        assert 'instructions:' in result
+        assert 'Instruction 1' in result
+        assert 'Instruction 2' in result
+
+    def test_exclude_instructions_by_default(self):
+        """Instructions should not be included by default."""
+        class MockRequestWithInstructions:
+            parts = [UserPromptPart(content='User message')]
+            instructions = ['Instruction 1']
+
+        history = [
+            ModelRequest(parts=[UserPromptPart(content='First')]),
+            MockRequestWithInstructions(),
+        ]
+        result = message_history_to_text(history, include_instructions=False)
+        assert 'instructions:' not in result

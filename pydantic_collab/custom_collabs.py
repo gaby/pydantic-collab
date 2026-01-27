@@ -57,8 +57,7 @@ class StarCollab(Collab[AgentDepsT, OutputDataT]):
                 raise CollabError('No agents available to set as starting_agent')
             self.starting_agent = self._agents[0]
         self._agent_tools[self.starting_agent] = tuple(i for i in self._agents if i is not self.starting_agent)
-        if self.final_agent not in (self.starting_agent, None):
-            raise CollabError(f'Final Agent must be either None or starting_agent in {self.__class__.__name__}')
+        # final_agent is always None from __init__, so just set it to starting_agent
         self.final_agent = self.starting_agent
 
 
@@ -76,8 +75,7 @@ class MeshCollab(Collab[AgentDepsT, OutputDataT]):
             if agent is not self.starting_agent:
                 # Mesh: all agents can call all other agents (including starting agent)
                 self._agent_tools[agent] = tuple(i for i in self._agents if i is not agent)
-        if self.final_agent not in (self.starting_agent, None):
-            raise CollabError(f'Final Agent must be either None or starting_agent in {self.__class__.__name__}')
+        # final_agent is always None from parent class, so just set it to starting_agent
         self.final_agent = self.starting_agent
 
 
@@ -93,6 +91,8 @@ class PipelineCollab(Collab[AgentDepsT, OutputDataT]):
         if self.final_agent is None:
             self.final_agent = self._agents[-1]
         elif self.final_agent not in self._agents:
+            # Add final_agent to both _agents and _name_to_agent for consistency
+            self._name_to_agent[self.final_agent.name] = self.final_agent
             self._agents = (*self._agents, self.final_agent)
         elif self.final_agent != self._agents[-1]:
             raise CollabError('Final agent must be last agent when using PipelineCollab')

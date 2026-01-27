@@ -63,5 +63,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Run tests
-        run: uv run pytest --tb=short -q
+      - name: Run tests with coverage
+        run: uv run coverage run -m pytest --tb=short -q
+
+      - name: Check coverage (>99%)
+        run: uv run coverage report --fail-under=99 --omit="tests/*"

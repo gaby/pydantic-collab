@@ -111,6 +111,25 @@ class TestGetRightHandoffModel:
         instance = Model(next_agent='TestAgent', query='Test')
         assert instance.include_thinking is False
 
+    def test_allow_thinking_creates_bool_field(self):
+        """Test that include_thinking='allow' creates a bool field with default False."""
+        settings = CollabSettings(include_thinking='allow')
+        Model = generate_handoff_pydantic_model(settings)
+
+        # Check the field exists and has correct default
+        assert 'include_thinking' in Model.model_fields
+        field = Model.model_fields['include_thinking']
+        assert field.default is False
+
+        # Can be set to True
+        instance = Model(next_agent='TestAgent', query='Test', include_thinking=True)
+        assert instance.include_thinking is True
+
+        # Defaults to False
+        instance2 = Model(next_agent='TestAgent', query='Test')
+        assert instance2.include_thinking is False
+
+
     def test_force_handoff_creates_classvar(self):
         settings = CollabSettings(include_handoff='force')
         Model = generate_handoff_pydantic_model(settings)
@@ -243,6 +262,27 @@ class TestCollabAgent:
         collab2 = CollabAgent(agent=agent2, description='Desc')
 
         assert collab1 != collab2
+
+    def test_inequality_with_non_collab_agent(self):
+        """Test that CollabAgent is not equal to non-CollabAgent types."""
+        agent = Agent('test', name='TestAgent')
+        collab_agent = CollabAgent(agent=agent, description='Test')
+
+        # Should return False when comparing with string
+        assert collab_agent != 'TestAgent'
+        assert not (collab_agent == 'TestAgent')
+
+        # Should return False when comparing with None
+        assert collab_agent != None
+        assert not (collab_agent == None)
+
+        # Should return False when comparing with int
+        assert collab_agent != 42
+        assert not (collab_agent == 42)
+
+        # Should return False when comparing with the underlying Agent
+        assert collab_agent != agent
+        assert not (collab_agent == agent)
 
     def test_hashable(self, base_agent):
         collab_agent = CollabAgent(agent=base_agent, description='Test')
