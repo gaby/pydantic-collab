@@ -1,6 +1,6 @@
 """Pydantic Collab - a Multi-agent orchestration framework built on top of Pydantic-AI."""
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 from ._types import (
     AgentMemory,
