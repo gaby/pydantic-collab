@@ -68,3 +68,13 @@ jobs:
 
       - name: Check coverage (>99%)
         run: uv run coverage report --fail-under=99 --omit="tests/*"
+
+      - name: Generate coverage XML
+        if: matrix.python-version == '3.11'
+        run: uv run coverage xml --omit="tests/*"
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

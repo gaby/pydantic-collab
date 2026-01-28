@@ -7,6 +7,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/pydantic-collab)](https://pypi.org/project/pydantic-collab/)
 [![Tests](https://img.shields.io/github/actions/workflow/status/boazkatzir/pydantic-collab/ci.yml?label=tests)](https://github.com/boazkatzir/pydantic-collab/actions)
+[![Coverage](https://codecov.io/gh/boazkatzir/pydantic-collab/branch/main/graph/badge.svg)](https://codecov.io/gh/boazkatzir/pydantic-collab)
 [![License](https://img.shields.io/pypi/l/pydantic-collab)](https://github.com/boazkatzir/pydantic-collab/blob/main/LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
@@ -35,13 +36,14 @@ from pydantic_collab import PipelineCollab, CollabAgent
 
 collab = PipelineCollab(
     agents=[
-        CollabAgent(name="Researcher", system_prompt="Research the topic thoroughly"),
-        CollabAgent(name="Writer", system_prompt="Write a clear, engaging response"),
+        CollabAgent(name="Researcher", system_prompt="Do a wide research, based on various sources"),
+        CollabAgent(name="Writer", system_prompt="Summarise the research, fact-check every claim",
+                    description="summariser and fact checker"),
     ],
-    model="openai:gpt-4o-mini",
+    model="anthropic:claude-opus-4-5",
 )
 
-result = collab.run_sync("Explain how neural networks learn")
+result = collab.run_sync("Explain the state of affairs regarding Greenland")
 print(result.output)
 ```
 
