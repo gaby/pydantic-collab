@@ -1412,20 +1412,19 @@ class Collab(Generic[AgentDepsT, OutputDataT]):
         if len(self._name_to_agent) != len(self._agents):
             raise ValueError('You cannot use same Agent name for different agents')
 
-        # Verify all agents have description except starting agent that doesn't need if it's not a tool
-
-        for agent in self._agents:
-            if not agent.description:
-                if agent is self.starting_agent:
-                    if agent in (i for conns in self._agent_tools.values() for i in conns):
-                        raise ValueError(
-                            f'Starting Agent {agent.name} needs to have description as it '
-                            'can be called by another agent'
-                        )
-                    elif agent in (i for conns in self._handoffs.values() for i in conns):
-                        raise ValueError(
-                            f'Starting Agent {agent.name} needs to have description as it '
-                            'can be hand-offed to by another agent'
-                        )
-                else:
-                    raise ValueError(f"Agent {agent.name} must have a description, as it's not the starting agent")
+        # We don't need description for all agents, it's redundant
+        # for agent in self._agents:
+        #     if not agent.description:
+        #         if agent is self.starting_agent:
+        #             if agent in (i for conns in self._agent_tools.values() for i in conns):
+        #                 raise ValueError(
+        #                     f'Starting Agent {agent.name} needs to have description as it '
+        #                     'can be called by another agent'
+        #                 )
+        #             elif agent in (i for conns in self._handoffs.values() for i in conns):
+        #                 raise ValueError(
+        #                     f'Starting Agent {agent.name} needs to have description as it '
+        #                     'can be hand-offed to by another agent'
+        #                 )
+        #         else:
+        #             raise ValueError(f"Agent {agent.name} must have a description, as it's not the starting agent")

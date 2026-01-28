@@ -16,6 +16,7 @@ wheels/
 Auto Run Docs/
 
 # helpers
+.coverage
 .coverage/
 .idea/
 .logfire/

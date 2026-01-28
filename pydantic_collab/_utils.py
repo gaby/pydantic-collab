@@ -203,7 +203,10 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:  # noqa: C901
     if has_handoffs:
         agents_desc: list[str] = []
         for agent in ctx.handoff_agents:
-            agents_desc.append(f'  • **{agent.name}**: {agent.description}')
+            if agent.description:
+                agents_desc.append(f'  • **{agent.name}**: {agent.description}')
+            else:
+                agents_desc.append(f'  • **{agent.name}**')
 
         output_instructions.append('---')
         output_instructions.append('## Handoff')
@@ -227,7 +230,10 @@ def default_build_agent_prompt(ctx: PromptBuilderContext) -> str:  # noqa: C901
     if has_tool_agents:
         agents_desc: list[str] = []
         for agent in ctx.tool_agents:
-            agents_desc.append(f'  • **{agent.name}**: {agent.description}')
+            if agent.description:
+                agents_desc.append(f'  • **{agent.name}**: {agent.description}')
+            else:
+                agents_desc.append(f'  • **{agent.name}**')
 
         output_instructions.append('---')
         output_instructions.append('### Agents You Can CALL as Tools')

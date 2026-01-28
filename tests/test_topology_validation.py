@@ -483,19 +483,18 @@ class TestValidateAgents:
                 ],
             )
 
-    def test_non_starting_agent_without_description_raises(self, model: TestModel) -> None:
+    def test_non_starting_agent_without_description_not_raises(self, model: TestModel) -> None:
         """Test non-starting agent without description raises error."""
         agent_a = Agent(model, name='AgentA')
         agent_b = Agent(model, name='AgentB')
 
         # AgentB will be added via agent_calls but has no description
-        with pytest.raises(ValueError, match="must have a description"):
-            Collab(
-                agents=[
-                    CollabAgent(agent=agent_a, description='A', agent_calls=['AgentB']),
-                    CollabAgent(agent=agent_b, description=None),  # No description, not starting
-                ],
-            )
+        assert Collab(
+            agents=[
+                CollabAgent(agent=agent_a, description='A', agent_calls=['AgentB']),
+                CollabAgent(agent=agent_b, description=None),  # No description, not starting
+            ],
+        )
 
 
 class TestAllowBackHandoff:
@@ -696,41 +695,6 @@ class TestLogfireInit:
             instrument_logfire=False,
         )
         assert collab._logfire is None
-
-
-class TestValidateAgentsDescriptions:
-    """Tests for description validation in _validate_agents_have_needed_attrs."""
-
-    def test_starting_agent_callable_needs_description(self, model: TestModel) -> None:
-        """Test starting agent that can be called needs description."""
-        agent_a = Agent(model, name='CallableStartA')
-        agent_b = Agent(model, name='CallableStartB')
-
-        with pytest.raises(ValueError, match='needs to have description'):
-            Collab(
-                agents=[
-                    CollabAgent(agent=agent_a, description=None),  # Starting agent with no desc
-                    CollabAgent(agent=agent_b, description='B', agent_calls=['CallableStartA']),
-                ],
-                starting_agent=(agent_a, None),
-            )
-
-    def test_starting_agent_handoffable_needs_description(self, model: TestModel) -> None:
-        """Test starting agent that can be handed off to needs description."""
-        agent_a = Agent(model, name='HandoffableStartA')
-        agent_b = Agent(model, name='HandoffableStartB')
-        agent_c = Agent(model, name='HandoffableStartC')
-
-        with pytest.raises(ValueError, match='needs to have description'):
-            Collab(
-                agents=[
-                    CollabAgent(agent=agent_a, description=None, agent_handoffs=['HandoffableStartB']),  # Starting with no desc
-                    CollabAgent(agent=agent_b, description='B', agent_handoffs=['HandoffableStartA', 'HandoffableStartC']),
-                    CollabAgent(agent=agent_c, description='C'),  # Final agent
-                ],
-                starting_agent=(agent_a, None),
-                final_agent=(agent_c, 'C'),
-            )
 
 
 class TestGetTsByAgentsCollection:

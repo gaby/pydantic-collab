@@ -1,8 +1,11 @@
-
 import pytest
 import tempfile
 import os
 from pathlib import Path
+
+# Skip all tests in this module if viz dependencies are not installed
+pytest.importorskip("matplotlib")
+pytest.importorskip("networkx")
 
 from pydantic_collab._types import CollabAgent
 
