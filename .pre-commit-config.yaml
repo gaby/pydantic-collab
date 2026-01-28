@@ -11,14 +11,7 @@ repos:
     hooks:
       - id: pytest-coverage
         name: pytest with coverage (>99%)
-        entry: uv run coverage run -m pytest --tb=short -q
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
-      - id: coverage-check
-        name: coverage check (>99%)
-        entry: uv run coverage report --fail-under=99 --omit="tests/*"
+        entry: bash -c 'uv run --frozen coverage run --data-file=/tmp/.coverage-precommit -m pytest --tb=short -q && uv run --frozen coverage report --data-file=/tmp/.coverage-precommit --fail-under=99 --omit="tests/*"'
         language: system
         pass_filenames: false
         always_run: true
