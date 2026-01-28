@@ -36,27 +36,26 @@ from pydantic_collab import PipelineCollab, CollabAgent
 
 collab = PipelineCollab(
     agents=[
-        CollabAgent(name="Researcher", system_prompt="Do a wide research, based on various sources"),
-        CollabAgent(name="Writer", system_prompt="Summarise the research, fact-check every claim",
-                    description="summariser and fact checker"),
+        CollabAgent(name="Triager", system_prompt="Classify the support ticket by product area and urgency (P0-P3). Extract the core issue."),
+        CollabAgent(name="Responder", system_prompt="Draft a helpful response. Acknowledge the issue, provide next steps or workarounds."),
     ],
-    model="anthropic:claude-opus-4-5",
+    model="anthropic:claude-sonnet-4-5",
 )
 
-result = collab.run_sync("Explain the state of affairs regarding Greenland")
+result = collab.run_sync("User email: 'I can't export my data to CSV, the button just spins forever. I need this for a board meeting tomorrow!'")
 print(result.output)
 ```
 
 ## When to Use This
 
-Use **pydantic-collab** when you need multiple specialized agents working together, without the need of human 
+Use **pydantic-collab** when you need multiple specialized agents working together, without the need of human
 intervention.
 
 **Relevant Use Cases:**
-- Multi-stage workflows (research → analyze → write)
+- Multi-stage workflows (triage → investigate → respond)
 - Specialist teams (coordinator + domain experts)
-- Complex tasks requiring different perspectives
-- continuous Feedback task (executor <> feedback giver) 
+- Tasks requiring different perspectives (engineering + legal + security)
+- Iterative refinement loops (drafter ↔ critic)
 
 ## ⚒️  🤝 Tool Calls vs Handoffs
 
@@ -73,14 +72,17 @@ intervention.
 ```python
 from pydantic_collab import PipelineCollab, CollabAgent
 
+# Incident postmortem pipeline
 collab = PipelineCollab(
     agents=[
-        CollabAgent(name="Intake", system_prompt="Summarize the request"),
-        CollabAgent(name="Analyst", system_prompt="Analyze in depth"),
-        CollabAgent(name="Reporter", system_prompt="Create final response"),
+        CollabAgent(name="TimelineBuilder", system_prompt="Construct a timeline from the incident channel logs. List each event with timestamp and actor."),
+        CollabAgent(name="RootCauseAnalyzer", system_prompt="Identify contributing factors and the root cause. Distinguish symptoms from causes."),
+        CollabAgent(name="ActionItemWriter", system_prompt="Propose concrete, assignable action items with owners. Prioritize by impact."),
     ],
-    model="openai:gpt-4o-mini",
+    model="openai:gpt-5.2-pro"
 )
+
+# Use: collab.run_sync(slack_channel_export)
 ```
 
 ### Star (Hub & Spoke)
@@ -88,14 +90,18 @@ collab = PipelineCollab(
 ```python
 from pydantic_collab import StarCollab, CollabAgent
 
+# Feature spec review - PM coordinates specialists
 collab = StarCollab(
     agents=[
-        CollabAgent(name="Coordinator", system_prompt="Route to specialists"),
-        CollabAgent(name="L1Support", system_prompt="Handle simple issues"),
-        CollabAgent(name="L2Support", system_prompt="Handle complex issues"),
+        CollabAgent(name="ProductLead", system_prompt="Coordinate the review. Synthesize feedback from specialists into a go/no-go recommendation."),
+        CollabAgent(name="EngineeringReviewer", system_prompt="Assess technical feasibility, estimate complexity, flag architectural concerns."),
+        CollabAgent(name="DesignReviewer", system_prompt="Evaluate UX implications, accessibility, consistency with design system."),
+        CollabAgent(name="SupportReviewer", system_prompt="Predict support burden, documentation needs, and customer confusion risks."),
     ],
-    model="openai:gpt-4o-mini",
+    model="openai:gpt-5.2-pro"
 )
+
+# ProductLead consults each specialist, then synthesizes
 ```
 
 ### Mesh (Everyone talks to everyone)
@@ -103,14 +109,18 @@ collab = StarCollab(
 ```python
 from pydantic_collab import MeshCollab, CollabAgent
 
+# Vendor evaluation - each perspective needs input from others
 collab = MeshCollab(
     agents=[
-        CollabAgent(name="Strategist", system_prompt="Business strategy"),
-        CollabAgent(name="Technologist", system_prompt="Technical feasibility"),
-        CollabAgent(name="Designer", system_prompt="User experience"),
+        CollabAgent(name="SecurityReviewer", system_prompt="Assess security posture: SOC2, data handling, access controls. Consult Legal on compliance implications."),
+        CollabAgent(name="EngineeringEvaluator", system_prompt="Evaluate integration effort, API quality, scalability. Consult Security on auth requirements."),
+        CollabAgent(name="LegalReviewer", system_prompt="Review contract terms, data processing agreements, liability. Consult Security on data residency."),
     ],
-    model="openai:gpt-4o-mini",
+    model="openai:gpt-5.2-pro"
 )
+
+# Each agent can consult others - security implications affect legal review, etc.
+# Use: collab.run_sync("Evaluate Acme Corp's proposal for our analytics pipeline: ...")
 ```
 
 <details>
@@ -121,24 +131,21 @@ Define explicit tool calls and handoffs:
 ```python
 from pydantic_collab import Collab, CollabAgent
 
+# Code review with specialist consultation
 collab = Collab(
     agents=[
         CollabAgent(
-            name="Router",
-            system_prompt="Route requests",
-            agent_calls="Researcher",      # Can call as tool
-            agent_handoffs="Writer",       # Can transfer control
+            name="LeadReviewer",
+            system_prompt="Review the PR for correctness and design. Consult specialists for deep dives.",
+            agent_calls=["SecurityChecker", "PerfAnalyzer"],  # Can consult
+            agent_handoffs="SummaryWriter",                   # Hands off for final summary
         ),
-        CollabAgent(name="Researcher", system_prompt="Research topics"),
-        CollabAgent(
-            name="Writer",
-            system_prompt="Write content",
-            agent_handoffs="Editor",
-        ),
-        CollabAgent(name="Editor", system_prompt="Final editing"),
+        CollabAgent(name="SecurityChecker", system_prompt="Check for vulnerabilities: injection, auth issues, secrets."),
+        CollabAgent(name="PerfAnalyzer", system_prompt="Identify performance issues: N+1 queries, blocking calls, memory."),
+        CollabAgent(name="SummaryWriter", system_prompt="Compile all feedback into a clear, actionable review summary."),
     ],
-    model="openai:gpt-4o-mini",
-    final_agent="Editor",
+    model="openai:gpt-5.2-pro",
+   final_agent="SummaryWriter"
 )
 ```
 
@@ -151,25 +158,30 @@ Share persistent context between agents during a run:
 ```python
 from pydantic_collab import PipelineCollab, CollabAgent, AgentMemory
 
-arch_memory = AgentMemory(
-    name="architecture",
-    description="Code architecture decisions and conventions"
+incident_context = AgentMemory(
+    name="incident",
+    description="Accumulated incident context: affected systems, customer impact, timeline"
 )
 
 collab = PipelineCollab(
     agents=[
         CollabAgent(
-            name="Architect",
-            system_prompt="Document architecture decisions",
-            memory={arch_memory: "rw"},  # Can read and write
+            name="FirstResponder",
+            system_prompt="Gather initial context: what's broken, who's affected, when it started. Document in memory.",
+            memory={incident_context: "rw"},  # Writes initial context
         ),
         CollabAgent(
-            name="Developer",
-            system_prompt="Implement following the conventions",
-            memory={arch_memory: "r"},   # Read-only
+            name="Investigator",
+            system_prompt="Deep dive into the root cause using the established context. Add findings to memory.",
+            memory={incident_context: "rw"},  # Reads context, adds findings
+        ),
+        CollabAgent(
+            name="CommunicationDrafter",
+            system_prompt="Draft customer and internal communications based on the full incident context.",
+            memory={incident_context: "r"},   # Reads accumulated context
         ),
     ],
-    model="openai:gpt-4o-mini",
+    model="openai:gpt-5.2-pro"
 )
 ```
 
@@ -209,14 +221,15 @@ pip install pydantic-collab[viz]  # Requires visualization dependencies
 collab = Collab(agents=[...], model="openai:gpt-4o-mini")
 
 @collab.tool_plain
-async def calculate(expression: str) -> float:
-    """Evaluate a math expression."""
-    return eval(expression)
+async def query_metrics(service: str, time_range: str) -> str:
+    """Query Prometheus metrics for a service."""
+    # ... integration with your metrics system
+    return metrics_data
 
-@collab.tool_plain(agents=("Researcher",))  # Only for specific agents
-async def search(query: str) -> str:
-    """Search the web."""
-    return f"Results for: {query}"
+@collab.tool_plain(agents=("Investigator",))  # Only for specific agents
+async def get_recent_deploys(service: str) -> str:
+    """Get recent deployments for a service."""
+    return deployment_history
 ```
 
 ## Result Object
@@ -226,7 +239,7 @@ result = collab.run_sync("Query")
 
 result.output              # Final output
 result.final_agent         # Agent that produced output
-result.execution_path      # ["Intake", "Analyst", "Reporter"]
+result.execution_path      # ["Triager", "Investigator", "Responder"]
 result.usage               # Token usage statistics
 
 print(result.print_execution_flow())  # Visual flow diagram
